@@ -89,6 +89,13 @@ class UserResponse(BaseModel):
     name: str
     role: str
 
+class LoginLogResponse(BaseModel):
+    id: str
+    user_name: str
+    user_code: str
+    timestamp: str
+    ip_address: Optional[str] = None
+
 # ============ PASSWORD HELPERS ============
 
 def hash_password(password: str) -> str:
@@ -189,7 +196,7 @@ async def admin_login(response: Response, login_data: AdminLogin):
     }
 
 @api_router.post("/auth/user/login")
-async def user_login(response: Response, login_data: UserCodeLogin):
+async def user_login(response: Response, request: Request, login_data: UserCodeLogin):
     code = login_data.code.strip().upper()
     access_code = await db.access_codes.find_one({"code": code, "is_active": True})
     
@@ -201,6 +208,21 @@ async def user_login(response: Response, login_data: UserCodeLogin):
         {"id": access_code["id"]},
         {"$set": {"last_used": datetime.now(timezone.utc).isoformat()}}
     )
+    
+    # Log the login
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
+    if client_ip and "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    
+    login_log = {
+        "id": str(uuid.uuid4()),
+        "user_id": access_code["id"],
+        "user_name": access_code.get("name", ""),
+        "user_code": access_code["code"],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ip_address": client_ip
+    }
+    await db.login_logs.insert_one(login_log)
     
     access_token = create_access_token(access_code["id"], "", "user")
     refresh_token = create_refresh_token(access_code["id"])
@@ -232,6 +254,14 @@ async def get_access_codes(request: Request):
     await require_admin(request)
     codes = await db.access_codes.find({}, {"_id": 0}).to_list(1000)
     return codes
+
+# ============ LOGIN LOGS ENDPOINTS (Admin only) ============
+
+@api_router.get("/login-logs", response_model=List[LoginLogResponse])
+async def get_login_logs(request: Request, limit: int = 100):
+    await require_admin(request)
+    logs = await db.login_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
+    return logs
 
 @api_router.post("/access-codes", response_model=AccessCodeResponse)
 async def create_access_code(request: Request, code_data: AccessCodeCreate):

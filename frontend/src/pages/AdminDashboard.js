@@ -15,7 +15,9 @@ import {
   Droplets,
   AlertTriangle,
   Check,
-  Copy
+  Copy,
+  ClipboardList,
+  RefreshCw
 } from 'lucide-react';
 import {
   Dialog,
@@ -57,6 +59,10 @@ export default function AdminDashboard() {
   const [settingsError, setSettingsError] = useState('');
   const [settingsSuccess, setSettingsSuccess] = useState('');
 
+  // Login Logs State
+  const [loginLogs, setLoginLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/');
@@ -65,6 +71,7 @@ export default function AdminDashboard() {
     } else if (user && user.role === 'admin') {
       fetchAccessCodes();
       fetchSettings();
+      fetchLoginLogs();
     }
   }, [user, authLoading, navigate]);
 
@@ -78,6 +85,20 @@ export default function AdminDashboard() {
       console.error('Failed to fetch access codes:', err);
     } finally {
       setCodesLoading(false);
+    }
+  };
+
+  const fetchLoginLogs = async () => {
+    try {
+      setLogsLoading(true);
+      const response = await axios.get(`${API_URL}/api/login-logs?limit=100`, {
+        withCredentials: true
+      });
+      setLoginLogs(response.data);
+    } catch (err) {
+      console.error('Failed to fetch login logs:', err);
+    } finally {
+      setLogsLoading(false);
     }
   };
 
@@ -267,6 +288,14 @@ export default function AdminDashboard() {
             >
               <Users className="w-4 h-4 mr-2" />
               Åtkomstkoder
+            </TabsTrigger>
+            <TabsTrigger 
+              value="logs" 
+              className="data-[state=active]:bg-[#09090B] data-[state=active]:text-white rounded-none px-6"
+              data-testid="tab-logs"
+            >
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Inloggningslogg
             </TabsTrigger>
             <TabsTrigger 
               value="settings" 
@@ -546,6 +575,74 @@ export default function AdminDashboard() {
                       ))}
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Login Logs Tab */}
+          <TabsContent value="logs" className="mt-0">
+            <div className="bg-white border border-[#E4E4E7] p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
+                  Inloggningslogg
+                </h2>
+                <button 
+                  onClick={fetchLoginLogs}
+                  className="btn-outline flex items-center gap-2 py-3"
+                  data-testid="refresh-logs-button"
+                >
+                  <RefreshCw className={`w-5 h-5 ${logsLoading ? 'animate-spin' : ''}`} />
+                  <span>UPPDATERA</span>
+                </button>
+              </div>
+
+              {logsLoading ? (
+                <p className="text-[#52525B]">Laddar loggar...</p>
+              ) : loginLogs.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-[#E4E4E7]">
+                  <ClipboardList className="w-12 h-12 text-[#E4E4E7] mx-auto mb-4" />
+                  <p className="text-[#52525B]">Inga inloggningar registrerade ännu</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full" data-testid="login-logs-table">
+                    <thead>
+                      <tr className="border-b-2 border-[#09090B]">
+                        <th className="text-left py-3 px-4 overline">DATUM & TID</th>
+                        <th className="text-left py-3 px-4 overline">ANVÄNDARE</th>
+                        <th className="text-left py-3 px-4 overline">KOD</th>
+                        <th className="text-left py-3 px-4 overline">IP-ADRESS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loginLogs.map((log) => (
+                        <tr 
+                          key={log.id} 
+                          className="border-b border-[#E4E4E7] hover:bg-[#F4F4F5] transition-colors"
+                          data-testid={`login-log-${log.id}`}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="font-medium">
+                              {new Date(log.timestamp).toLocaleDateString('sv-SE')}
+                            </div>
+                            <div className="text-sm text-[#52525B]">
+                              {new Date(log.timestamp).toLocaleTimeString('sv-SE')}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 font-medium">{log.user_name}</td>
+                          <td className="py-3 px-4">
+                            <code className="font-mono bg-[#F4F4F5] px-2 py-1 tracking-wider">
+                              {log.user_code}
+                            </code>
+                          </td>
+                          <td className="py-3 px-4 text-[#52525B] text-sm font-mono">
+                            {log.ip_address || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
