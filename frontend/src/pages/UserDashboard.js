@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import { QRCodeSVG } from 'qrcode.react';
 import { 
   KeyRound, 
   LogOut, 
@@ -9,7 +10,8 @@ import {
   ChevronDown, 
   ChevronUp,
   Droplets,
-  AlertTriangle
+  AlertTriangle,
+  QrCode
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -131,6 +133,33 @@ export default function UserDashboard() {
           </div>
         </section>
 
+        {/* QR Code Section */}
+        <section className="mb-12" data-testid="qr-code-section">
+          <div className="overline mb-4">DELA GUIDEN</div>
+          <div className="bg-[#F4F4F5] border border-[#E4E4E7] p-8">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="bg-white p-4 border border-[#E4E4E7]">
+                <QRCodeSVG 
+                  value={window.location.origin}
+                  size={140}
+                  level="H"
+                  includeMargin={false}
+                  data-testid="qr-code"
+                />
+              </div>
+              <div className="text-center sm:text-left">
+                <div className="flex items-center gap-2 mb-2 justify-center sm:justify-start">
+                  <QrCode className="w-5 h-5 text-[#0047FF]" />
+                  <span className="font-semibold text-lg">Skanna för åtkomst</span>
+                </div>
+                <p className="text-[#52525B] max-w-xs">
+                  Skanna QR-koden med din telefon för att snabbt komma åt guiden nästa gång.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Instructions Section */}
         <section className="mb-12" data-testid="instructions-section">
           <div className="flex items-center justify-between mb-6">
@@ -213,12 +242,22 @@ export default function UserDashboard() {
             KOPPLINGSGUIDE - VATTENSYSTEM
           </h1>
           
-          <div className="mb-8">
-            <h2 className="text-xl font-bold mb-2">Nyckelskåpskod</h2>
-            <div className="text-4xl font-mono font-bold tracking-widest">
-              {settings?.shared_code}
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h2 className="text-xl font-bold mb-2">Nyckelskåpskod</h2>
+              <div className="text-4xl font-mono font-bold tracking-widest">
+                {settings?.shared_code}
+              </div>
+              <p className="text-sm text-gray-600 mt-2">{settings?.shared_code_description}</p>
             </div>
-            <p className="text-sm text-gray-600 mt-2">{settings?.shared_code_description}</p>
+            <div className="text-center">
+              <QRCodeSVG 
+                value={window.location.origin}
+                size={100}
+                level="H"
+              />
+              <p className="text-xs text-gray-500 mt-1">Skanna för digital guide</p>
+            </div>
           </div>
 
           <div className="mb-4 p-4 border-l-4 border-yellow-500 bg-yellow-50">
