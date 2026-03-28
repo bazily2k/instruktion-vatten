@@ -442,10 +442,16 @@ async def shutdown_db_client():
 # Include the router in the main app
 app.include_router(api_router)
 
+cors_origins = os.environ.get("CORS_ORIGINS", "*")
+if cors_origins == "*":
+    allow_origins = ["*"]
+else:
+    allow_origins = [origin.strip() for origin in cors_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[os.environ.get("FRONTEND_URL", "http://localhost:3000")],
+    allow_origins=allow_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
