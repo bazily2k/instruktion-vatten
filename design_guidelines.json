@@ -1,0 +1,101 @@
+{
+  "theme": "light",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "vibe": "Authority, Clarity, Functional, Objective",
+  "typography": {
+    "font_families": {
+      "heading": "Chivo, sans-serif",
+      "body": "IBM Plex Sans, sans-serif",
+      "mono": "IBM Plex Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tighter leading-none",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl font-semibold",
+      "body": "text-base sm:text-lg leading-relaxed",
+      "small": "text-sm font-medium tracking-wide uppercase",
+      "code_display": "text-5xl sm:text-6xl font-mono font-bold tracking-widest text-primary"
+    },
+    "rules": [
+      "Headlines MUST use tight letter spacing (tracking-tight or tracking-tighter).",
+      "Use IBM Plex Mono for all personal codes and keybox access codes.",
+      "Overlines/Labels must be uppercase, tiny, and have wide spacing (tracking-[0.2em])."
+    ]
+  },
+  "color_palette": {
+    "background": "#FFFFFF",
+    "surface": "#F4F4F5",
+    "surface_hover": "#E4E4E7",
+    "primary": "#0047FF",
+    "primary_foreground": "#FFFFFF",
+    "text_primary": "#09090B",
+    "text_secondary": "#52525B",
+    "border": "#E4E4E7",
+    "warning": "#FF204E",
+    "warning_foreground": "#FFFFFF",
+    "note": "#FFD700"
+  },
+  "spacing_and_layout": {
+    "philosophy": "Mobile-First Utility. Users will be holding phones in an emergency/maintenance scenario. Tap targets must be huge. Space must clearly separate steps.",
+    "scale": "p-4, p-6, p-8, p-12",
+    "patterns": {
+      "user_view": "Single-column vertical flow. Massive typography for the keybox code. Generous spacing (gap-8 or gap-12) between instruction steps.",
+      "admin_view": "Control Room Grid (grid-cols-1 md:grid-cols-3 lg:grid-cols-4) with tight gaps (gap-4 or gap-6) and 1px borders.",
+      "steps": "Use large structural numbers (e.g., '01', '02') anchored to the left, with content beside or directly below it."
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary_foreground rounded-none px-6 py-4 font-bold text-lg hover:bg-blue-800 transition-colors",
+      "outline": "border-2 border-text_primary text-text_primary rounded-none px-6 py-4 font-bold hover:bg-surface transition-colors"
+    },
+    "cards": {
+      "style": "bg-surface border border-border p-6 rounded-none",
+      "rule": "Go cardless where possible. If cards are needed, use flat solid surfaces with sharp 1px borders."
+    },
+    "inputs": {
+      "style": "border-b-2 border-border bg-transparent px-0 py-3 rounded-none focus:ring-0 focus:border-primary focus:outline-none transition-colors",
+      "rule": "Use brutalist/minimalist input fields. High contrast focus states."
+    },
+    "icons": {
+      "library": "@phosphor-icons/react",
+      "style": "Use 'bold' or 'fill' weights for high legibility."
+    }
+  },
+  "motion": {
+    "philosophy": "Minimalist. No distracting animations during a stressful task.",
+    "rules": [
+      "Use micro-interactions for feedback (button hover, click).",
+      "Ensure accordion or tab expansions for instructions use a fast, linear transition (150ms)."
+    ]
+  },
+  "accessibility": {
+    "contrast": "Ensure pure black/dark grey text against white background (APCA standard).",
+    "tap_targets": "Minimum 48x48px for all interactive elements, especially on the mobile instruction flow.",
+    "testing": "All interactive and key informational elements MUST include a `data-testid` attribute."
+  },
+  "image_urls": {
+    "hero_context": {
+      "url": "https://images.pexels.com/photos/17182110/pexels-photo-17182110.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Industrial basement. Use as a subtle background or header image for context (with a heavy white overlay for contrast)."
+    },
+    "step_keybox": {
+      "url": "https://images.pexels.com/photos/2985875/pexels-photo-2985875.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Hand operating a combination lockbox. Use in the step detailing how to retrieve the physical key."
+    },
+    "step_valves": {
+      "url": "https://images.unsplash.com/photo-1774019883037-91f5d43e2890?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwxfHx3YXRlciUyMHB1bXAlMjBpbmR1c3RyaWFsfGVufDB8fHx8MTc3NDczNzUyNXww&ixlib=rb-4.1.0&q=85",
+      "description": "Industrial valve. Use in the step explaining how to switch the water flow/valves."
+    }
+  },
+  "instructions_to_main_agent": [
+    "This is a utility app for a high-stress scenario (water pump failure). Prioritize absolute clarity and mobile responsiveness.",
+    "Do NOT use 'Inter' for headings. Use 'Chivo' for headings, 'IBM Plex Sans' for body text, and 'IBM Plex Mono' for codes.",
+    "Implement the User view as a mobile-first, single-column flow. The shared keybox code must be massive and prominent.",
+    "Implement the Step-by-Step instructions with large, high-contrast structural numbers (e.g., '01', '02').",
+    "Include a prominent 'Download PDF' button (use Phosphor Icons) in the instructions section.",
+    "Implement the Admin Dashboard using a dense 'Control Room' grid layout for managing user access codes and updating instructions.",
+    "Use Shadcn UI but heavily customize the appearance to remove Vercel-like aesthetics (use rounded-none, sharp borders, high contrast).",
+    "Ensure all interactive elements have `data-testid` attributes."
+  ]
+}
