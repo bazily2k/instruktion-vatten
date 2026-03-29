@@ -138,7 +138,7 @@ export default function AdminDashboard() {
 
   const handleSaveCode = async () => {
     if (!codeForm.name.trim() || !codeForm.code.trim()) {
-      setCodeError('Namn och kod krävs');
+      setCodeError('Name and code are required');
       return;
     }
 
@@ -159,12 +159,12 @@ export default function AdminDashboard() {
       setShowCodeModal(false);
       fetchAccessCodes();
     } catch (err) {
-      setCodeError(err.response?.data?.detail || 'Något gick fel');
+      setCodeError(err.response?.data?.detail || 'Something went wrong');
     }
   };
 
   const handleDeleteCode = async (codeId) => {
-    if (!window.confirm('Är du säker på att du vill ta bort denna kod?')) return;
+    if (!window.confirm('Are you sure you want to delete this code?')) return;
     
     try {
       await axios.delete(`${API_URL}/api/access-codes/${codeId}`, {
@@ -206,10 +206,10 @@ export default function AdminDashboard() {
       );
       setSettings(settingsForm);
       setEditingSettings(false);
-      setSettingsSuccess('Inställningar sparade!');
+      setSettingsSuccess('Settings saved!');
       setTimeout(() => setSettingsSuccess(''), 3000);
     } catch (err) {
-      setSettingsError(err.response?.data?.detail || 'Kunde inte spara inställningar');
+      setSettingsError(err.response?.data?.detail || 'Could not save settings');
     }
   };
 
@@ -244,7 +244,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <Droplets className="w-12 h-12 text-[#0047FF] mx-auto mb-4 animate-pulse" />
-          <p className="text-[#52525B]">Laddar...</p>
+          <p className="text-[#52525B]">Loading...</p>
         </div>
       </div>
     );
@@ -263,7 +263,7 @@ export default function AdminDashboard() {
               <h1 className="font-bold text-xl tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
                 ADMIN
               </h1>
-              <p className="text-sm text-[#52525B]">Kopplingsguide</p>
+              <p className="text-sm text-[#52525B]">Connection Guide</p>
             </div>
           </div>
           <button 
@@ -272,7 +272,7 @@ export default function AdminDashboard() {
             data-testid="admin-logout-button"
           >
             <LogOut className="w-5 h-5" />
-            <span className="text-sm font-medium hidden sm:inline">Logga ut</span>
+            <span className="text-sm font-medium hidden sm:inline">Log out</span>
           </button>
         </div>
       </header>
@@ -287,7 +287,7 @@ export default function AdminDashboard() {
               data-testid="tab-codes"
             >
               <Users className="w-4 h-4 mr-2" />
-              Åtkomstkoder
+              Access Codes
             </TabsTrigger>
             <TabsTrigger 
               value="logs" 
@@ -295,7 +295,7 @@ export default function AdminDashboard() {
               data-testid="tab-logs"
             >
               <ClipboardList className="w-4 h-4 mr-2" />
-              Inloggningslogg
+              Login History
             </TabsTrigger>
             <TabsTrigger 
               value="settings" 
@@ -303,7 +303,7 @@ export default function AdminDashboard() {
               data-testid="tab-settings"
             >
               <Settings className="w-4 h-4 mr-2" />
-              Inställningar
+              Settings
             </TabsTrigger>
           </TabsList>
 
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
             <div className="bg-white border border-[#E4E4E7] p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-                  Åtkomstkoder
+                  Access Codes
                 </h2>
                 <button 
                   onClick={openNewCodeModal}
@@ -320,16 +320,16 @@ export default function AdminDashboard() {
                   data-testid="add-code-button"
                 >
                   <Plus className="w-5 h-5" />
-                  <span>NY KOD</span>
+                  <span>NEW CODE</span>
                 </button>
               </div>
 
               {codesLoading ? (
-                <p className="text-[#52525B]">Laddar koder...</p>
+                <p className="text-[#52525B]">Loading codes...</p>
               ) : accessCodes.length === 0 ? (
                 <div className="text-center py-12 border border-dashed border-[#E4E4E7]">
                   <Key className="w-12 h-12 text-[#E4E4E7] mx-auto mb-4" />
-                  <p className="text-[#52525B]">Inga åtkomstkoder skapade ännu</p>
+                  <p className="text-[#52525B]">No access codes created yet</p>
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -369,7 +369,7 @@ export default function AdminDashboard() {
                         <button 
                           onClick={() => copyCodeToClipboard(code.code)}
                           className="p-1 hover:bg-[#E4E4E7] transition-colors"
-                          title="Kopiera"
+                          title="Copy"
                         >
                           {copiedCode === code.code ? (
                             <Check className="w-4 h-4 text-green-600" />
@@ -389,11 +389,11 @@ export default function AdminDashboard() {
                           }`}
                           data-testid={`toggle-code-${code.id}`}
                         >
-                          {code.is_active ? 'AKTIV' : 'INAKTIV'}
+                          {code.is_active ? 'ACTIVE' : 'INACTIVE'}
                         </button>
                         {code.last_used && (
                           <span className="text-[#52525B]">
-                            Senast: {new Date(code.last_used).toLocaleDateString('sv-SE')}
+                            Last: {new Date(code.last_used).toLocaleDateString('en-US')}
                           </span>
                         )}
                       </div>
@@ -409,7 +409,7 @@ export default function AdminDashboard() {
             <div className="bg-white border border-[#E4E4E7] p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-                  Inställningar
+                  Settings
                 </h2>
                 {!editingSettings ? (
                   <button 
@@ -418,7 +418,7 @@ export default function AdminDashboard() {
                     data-testid="edit-settings-button"
                   >
                     <Edit2 className="w-5 h-5" />
-                    <span>REDIGERA</span>
+                    <span>EDIT</span>
                   </button>
                 ) : (
                   <div className="flex gap-2">
@@ -428,7 +428,7 @@ export default function AdminDashboard() {
                       data-testid="cancel-settings-button"
                     >
                       <X className="w-5 h-5" />
-                      <span>AVBRYT</span>
+                      <span>CANCEL</span>
                     </button>
                     <button 
                       onClick={handleSaveSettings}
@@ -436,7 +436,7 @@ export default function AdminDashboard() {
                       data-testid="save-settings-button"
                     >
                       <Save className="w-5 h-5" />
-                      <span>SPARA</span>
+                      <span>SAVE</span>
                     </button>
                   </div>
                 )}
@@ -457,12 +457,12 @@ export default function AdminDashboard() {
               )}
 
               {settingsLoading ? (
-                <p className="text-[#52525B]">Laddar inställningar...</p>
+                <p className="text-[#52525B]">Loading settings...</p>
               ) : (
                 <div className="space-y-8">
                   {/* Shared Code */}
                   <div>
-                    <label className="overline block mb-3">NYCKELSKÅPSKOD</label>
+                    <label className="overline block mb-3">KEY BOX CODE</label>
                     {editingSettings ? (
                       <Input
                         value={settingsForm.shared_code}
@@ -479,7 +479,7 @@ export default function AdminDashboard() {
 
                   {/* Shared Code Description */}
                   <div>
-                    <label className="overline block mb-3">KODBESKRIVNING</label>
+                    <label className="overline block mb-3">CODE DESCRIPTION</label>
                     {editingSettings ? (
                       <Input
                         value={settingsForm.shared_code_description}
@@ -494,7 +494,7 @@ export default function AdminDashboard() {
 
                   {/* Instructions Text */}
                   <div>
-                    <label className="overline block mb-3">INSTRUKTIONSTEXT</label>
+                    <label className="overline block mb-3">INSTRUCTIONS TEXT</label>
                     {editingSettings ? (
                       <textarea
                         value={settingsForm.instructions_text}
@@ -512,7 +512,7 @@ export default function AdminDashboard() {
                   {/* Instructions Steps */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <label className="overline">INSTRUKTIONSSTEG</label>
+                      <label className="overline">INSTRUCTION STEPS</label>
                       {editingSettings && (
                         <button 
                           onClick={handleAddStep}
@@ -520,7 +520,7 @@ export default function AdminDashboard() {
                           data-testid="add-step-button"
                         >
                           <Plus className="w-4 h-4" />
-                          LÄGG TILL STEG
+                          ADD STEP
                         </button>
                       )}
                     </div>
@@ -536,19 +536,19 @@ export default function AdminDashboard() {
                                   <Input
                                     value={step.title}
                                     onChange={(e) => handleUpdateStep(index, 'title', e.target.value)}
-                                    placeholder="Titel"
+                                    placeholder="Title"
                                     className="rounded-none border-2 font-semibold"
                                   />
                                   <textarea
                                     value={step.description}
                                     onChange={(e) => handleUpdateStep(index, 'description', e.target.value)}
-                                    placeholder="Beskrivning"
+                                    placeholder="Description"
                                     className="w-full border-2 border-[#E4E4E7] p-2 rounded-none focus:border-[#0047FF] focus:outline-none"
                                   />
                                   <Input
                                     value={step.image_url}
                                     onChange={(e) => handleUpdateStep(index, 'image_url', e.target.value)}
-                                    placeholder="Bild-URL"
+                                    placeholder="Image URL"
                                     className="rounded-none border-2 text-sm"
                                   />
                                 </>
@@ -585,7 +585,7 @@ export default function AdminDashboard() {
             <div className="bg-white border border-[#E4E4E7] p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-                  Inloggningslogg
+                  Login History
                 </h2>
                 <button 
                   onClick={fetchLoginLogs}
@@ -593,26 +593,26 @@ export default function AdminDashboard() {
                   data-testid="refresh-logs-button"
                 >
                   <RefreshCw className={`w-5 h-5 ${logsLoading ? 'animate-spin' : ''}`} />
-                  <span>UPPDATERA</span>
+                  <span>REFRESH</span>
                 </button>
               </div>
 
               {logsLoading ? (
-                <p className="text-[#52525B]">Laddar loggar...</p>
+                <p className="text-[#52525B]">Loading logs...</p>
               ) : loginLogs.length === 0 ? (
                 <div className="text-center py-12 border border-dashed border-[#E4E4E7]">
                   <ClipboardList className="w-12 h-12 text-[#E4E4E7] mx-auto mb-4" />
-                  <p className="text-[#52525B]">Inga inloggningar registrerade ännu</p>
+                  <p className="text-[#52525B]">No logins recorded yet</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full" data-testid="login-logs-table">
                     <thead>
                       <tr className="border-b-2 border-[#09090B]">
-                        <th className="text-left py-3 px-4 overline">DATUM & TID</th>
-                        <th className="text-left py-3 px-4 overline">ANVÄNDARE</th>
-                        <th className="text-left py-3 px-4 overline">KOD</th>
-                        <th className="text-left py-3 px-4 overline">IP-ADRESS</th>
+                        <th className="text-left py-3 px-4 overline">DATE & TIME</th>
+                        <th className="text-left py-3 px-4 overline">USER</th>
+                        <th className="text-left py-3 px-4 overline">CODE</th>
+                        <th className="text-left py-3 px-4 overline">IP ADDRESS</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -624,10 +624,10 @@ export default function AdminDashboard() {
                         >
                           <td className="py-3 px-4">
                             <div className="font-medium">
-                              {new Date(log.timestamp).toLocaleDateString('sv-SE')}
+                              {new Date(log.timestamp).toLocaleDateString('en-US')}
                             </div>
                             <div className="text-sm text-[#52525B]">
-                              {new Date(log.timestamp).toLocaleTimeString('sv-SE')}
+                              {new Date(log.timestamp).toLocaleTimeString('en-US')}
                             </div>
                           </td>
                           <td className="py-3 px-4 font-medium">{log.user_name}</td>
@@ -655,37 +655,37 @@ export default function AdminDashboard() {
         <DialogContent className="rounded-none border-2 border-[#09090B]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-              {editingCode ? 'REDIGERA KOD' : 'NY ÅTKOMSTKOD'}
+              {editingCode ? 'EDIT CODE' : 'NEW ACCESS CODE'}
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div>
-              <label className="overline block mb-2">NAMN</label>
+              <label className="overline block mb-2">NAME</label>
               <Input
                 value={codeForm.name}
                 onChange={(e) => setCodeForm({ ...codeForm, name: e.target.value })}
-                placeholder="T.ex. Johan Andersson"
+                placeholder="e.g. John Smith"
                 className="rounded-none border-2"
                 data-testid="code-name-input"
               />
             </div>
             <div>
-              <label className="overline block mb-2">KOD</label>
+              <label className="overline block mb-2">CODE</label>
               <Input
                 value={codeForm.code}
                 onChange={(e) => setCodeForm({ ...codeForm, code: e.target.value.toUpperCase() })}
-                placeholder="T.ex. ABC123"
+                placeholder="e.g. ABC123"
                 className="rounded-none border-2 font-mono tracking-widest"
                 data-testid="code-code-input"
               />
             </div>
             <div>
-              <label className="overline block mb-2">BESKRIVNING (VALFRITT)</label>
+              <label className="overline block mb-2">DESCRIPTION (OPTIONAL)</label>
               <Input
                 value={codeForm.description}
                 onChange={(e) => setCodeForm({ ...codeForm, description: e.target.value })}
-                placeholder="T.ex. Lägenhet 3B"
+                placeholder="e.g. Apartment 3B"
                 className="rounded-none border-2"
                 data-testid="code-description-input"
               />
@@ -704,14 +704,14 @@ export default function AdminDashboard() {
               onClick={() => setShowCodeModal(false)}
               className="rounded-none border-2"
             >
-              AVBRYT
+              CANCEL
             </Button>
             <Button 
               onClick={handleSaveCode}
               className="rounded-none bg-[#0047FF] hover:bg-blue-800"
               data-testid="save-code-button"
             >
-              {editingCode ? 'SPARA' : 'SKAPA'}
+              {editingCode ? 'SAVE' : 'CREATE'}
             </Button>
           </DialogFooter>
         </DialogContent>

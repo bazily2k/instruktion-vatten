@@ -73,7 +73,7 @@ export function useAuth() {
 // Error formatter helper
 export function formatApiError(error) {
   const detail = error?.response?.data?.detail;
-  if (detail == null) return "Något gick fel. Försök igen.";
+  if (detail == null) return "Something went wrong. Please try again.";
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
     return detail.map((e) => (e && typeof e.msg === "string" ? e.msg : JSON.stringify(e))).filter(Boolean).join(" ");

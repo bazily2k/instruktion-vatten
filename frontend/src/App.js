@@ -16,7 +16,7 @@ function ProtectedRoute({ children, requireAdmin = false }) {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <Droplets className="w-12 h-12 text-[#0047FF] mx-auto mb-4 animate-pulse" />
-          <p className="text-[#52525B]">Laddar...</p>
+          <p className="text-[#52525B]">Loading...</p>
         </div>
       </div>
     );
@@ -45,7 +45,7 @@ function AppRoutes() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <Droplets className="w-12 h-12 text-[#0047FF] mx-auto mb-4 animate-pulse" />
-          <p className="text-[#52525B]">Laddar...</p>
+          <p className="text-[#52525B]">Loading...</p>
         </div>
       </div>
     );

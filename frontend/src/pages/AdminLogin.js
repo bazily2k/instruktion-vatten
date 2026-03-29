@@ -14,7 +14,7 @@ export default function AdminLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      setError('Ange e-post och lösenord');
+      setError('Please enter email and password');
       return;
     }
     
@@ -39,7 +39,7 @@ export default function AdminLogin() {
           <div className="flex items-center gap-3">
             <Droplets className="w-8 h-8 text-[#0047FF]" />
             <span className="font-bold text-xl tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-              KOPPLINGSGUIDE
+              CONNECTION GUIDE
             </span>
           </div>
           <Link 
@@ -48,7 +48,7 @@ export default function AdminLogin() {
             data-testid="back-to-user-login"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Tillbaka</span>
+            <span className="text-sm font-medium">Back</span>
           </Link>
         </div>
       </header>
@@ -72,14 +72,14 @@ export default function AdminLogin() {
           </h1>
           
           <p className="text-center text-[#52525B] mb-12 text-lg">
-            Logga in för att hantera systemet
+            Log in to manage the system
           </p>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="overline block mb-3" htmlFor="email-input">
-                E-POST
+                EMAIL
               </label>
               <input
                 id="email-input"
@@ -96,7 +96,7 @@ export default function AdminLogin() {
 
             <div>
               <label className="overline block mb-3" htmlFor="password-input">
-                LÖSENORD
+                PASSWORD
               </label>
               <input
                 id="password-input"
@@ -126,10 +126,10 @@ export default function AdminLogin() {
               data-testid="admin-login-button"
             >
               {loading ? (
-                'LOGGAR IN...'
+                'LOGGING IN...'
               ) : (
                 <>
-                  LOGGA IN
+                  LOG IN
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

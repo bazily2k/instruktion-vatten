@@ -41,7 +41,7 @@ export default function UserDashboard() {
       });
       setSettings(response.data);
     } catch (err) {
-      setError('Kunde inte hämta information');
+      setError('Could not load information');
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export default function UserDashboard() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <Droplets className="w-12 h-12 text-[#0047FF] mx-auto mb-4 animate-pulse" />
-          <p className="text-[#52525B]">Laddar...</p>
+          <p className="text-[#52525B]">Loading...</p>
         </div>
       </div>
     );
@@ -78,7 +78,7 @@ export default function UserDashboard() {
           <AlertTriangle className="w-12 h-12 text-[#FF204E] mx-auto mb-4" />
           <p className="text-[#FF204E] font-medium">{error}</p>
           <button onClick={fetchSettings} className="btn-outline mt-4">
-            Försök igen
+            Try again
           </button>
         </div>
       </div>
@@ -93,7 +93,7 @@ export default function UserDashboard() {
           <div className="flex items-center gap-3">
             <Droplets className="w-8 h-8 text-[#0047FF]" />
             <span className="font-bold text-xl tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-              KOPPLINGSGUIDE
+              CONNECTION GUIDE
             </span>
           </div>
           <button 
@@ -102,7 +102,7 @@ export default function UserDashboard() {
             data-testid="logout-button"
           >
             <LogOut className="w-5 h-5" />
-            <span className="text-sm font-medium hidden sm:inline">Logga ut</span>
+            <span className="text-sm font-medium hidden sm:inline">Log out</span>
           </button>
         </div>
       </header>
@@ -112,13 +112,13 @@ export default function UserDashboard() {
         {/* Welcome */}
         {user?.name && (
           <p className="text-[#52525B] mb-8">
-            Välkommen, <span className="font-semibold text-[#09090B]">{user.name}</span>
+            Welcome, <span className="font-semibold text-[#09090B]">{user.name}</span>
           </p>
         )}
 
         {/* Shared Code Section */}
         <section className="mb-12" data-testid="shared-code-section">
-          <div className="overline mb-4">NYCKELSKÅPSKOD</div>
+          <div className="overline mb-4">KEY BOX CODE</div>
           <div className="bg-[#F4F4F5] border border-[#E4E4E7] p-8">
             <div className="flex items-center gap-4 mb-4">
               <KeyRound className="w-8 h-8 text-[#0047FF]" />
@@ -135,7 +135,7 @@ export default function UserDashboard() {
 
         {/* QR Code Section */}
         <section className="mb-12" data-testid="qr-code-section">
-          <div className="overline mb-4">DELA GUIDEN</div>
+          <div className="overline mb-4">SHARE GUIDE</div>
           <div className="bg-[#F4F4F5] border border-[#E4E4E7] p-8">
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <div className="bg-white p-4 border border-[#E4E4E7]">
@@ -150,10 +150,10 @@ export default function UserDashboard() {
               <div className="text-center sm:text-left">
                 <div className="flex items-center gap-2 mb-2 justify-center sm:justify-start">
                   <QrCode className="w-5 h-5 text-[#0047FF]" />
-                  <span className="font-semibold text-lg">Skanna för åtkomst</span>
+                  <span className="font-semibold text-lg">Scan for access</span>
                 </div>
                 <p className="text-[#52525B] max-w-xs">
-                  Skanna QR-koden med din telefon för att snabbt komma åt guiden nästa gång.
+                  Scan the QR code with your phone to quickly access the guide next time.
                 </p>
               </div>
             </div>
@@ -163,14 +163,14 @@ export default function UserDashboard() {
         {/* Instructions Section */}
         <section className="mb-12" data-testid="instructions-section">
           <div className="flex items-center justify-between mb-6">
-            <div className="overline">INSTRUKTIONER</div>
+            <div className="overline">INSTRUCTIONS</div>
             <button 
               onClick={handleDownloadPDF}
               className="btn-outline flex items-center gap-2 py-2 px-4 no-print"
               data-testid="download-pdf-button"
             >
               <Download className="w-4 h-4" />
-              <span className="text-sm">LADDA NER PDF</span>
+              <span className="text-sm">DOWNLOAD PDF</span>
             </button>
           </div>
 
@@ -239,12 +239,12 @@ export default function UserDashboard() {
         {/* Print-only full content */}
         <div className="hidden print:block">
           <h1 className="text-3xl font-black mb-6" style={{ fontFamily: 'Chivo, sans-serif' }}>
-            KOPPLINGSGUIDE - VATTENSYSTEM
+            CONNECTION GUIDE - WATER SYSTEM
           </h1>
           
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h2 className="text-xl font-bold mb-2">Nyckelskåpskod</h2>
+              <h2 className="text-xl font-bold mb-2">Key Box Code</h2>
               <div className="text-4xl font-mono font-bold tracking-widest">
                 {settings?.shared_code}
               </div>
@@ -256,7 +256,7 @@ export default function UserDashboard() {
                 size={100}
                 level="H"
               />
-              <p className="text-xs text-gray-500 mt-1">Skanna för digital guide</p>
+              <p className="text-xs text-gray-500 mt-1">Scan for digital guide</p>
             </div>
           </div>
 
@@ -284,7 +284,7 @@ export default function UserDashboard() {
 
       {/* Footer */}
       <footer className="p-6 border-t border-[#E4E4E7] text-center text-[#52525B] text-sm no-print">
-        Kontakta fastighetsförvaltaren vid problem
+        Contact property management if you have any issues
       </footer>
     </div>
   );

@@ -13,7 +13,7 @@ export default function UserLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!code.trim()) {
-      setError('Ange din personliga kod');
+      setError('Please enter your personal code');
       return;
     }
     
@@ -44,7 +44,7 @@ export default function UserLogin() {
         <div className="flex items-center gap-3">
           <Droplets className="w-8 h-8 text-[#0047FF]" />
           <span className="font-bold text-xl tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-            KOPPLINGSGUIDE
+            CONNECTION GUIDE
           </span>
         </div>
       </header>
@@ -64,18 +64,18 @@ export default function UserLogin() {
             className="text-4xl sm:text-5xl font-black tracking-tighter text-center mb-4"
             style={{ fontFamily: 'Chivo, sans-serif' }}
           >
-            LOGGA IN
+            LOG IN
           </h1>
           
           <p className="text-center text-[#52525B] mb-12 text-lg">
-            Ange din personliga åtkomstkod
+            Enter your personal access code
           </p>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-8">
             <div>
               <label className="overline block mb-4" htmlFor="code-input">
-                PERSONLIG KOD
+                PERSONAL CODE
               </label>
               <input
                 id="code-input"
@@ -107,10 +107,10 @@ export default function UserLogin() {
               data-testid="user-login-button"
             >
               {loading ? (
-                'LOGGAR IN...'
+                'LOGGING IN...'
               ) : (
                 <>
-                  GÅ VIDARE
+                  CONTINUE
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -127,7 +127,7 @@ export default function UserLogin() {
           data-testid="admin-login-link"
         >
           <Shield className="w-4 h-4" />
-          <span className="text-sm font-medium">Administratör</span>
+          <span className="text-sm font-medium">Administrator</span>
         </Link>
       </footer>
     </div>

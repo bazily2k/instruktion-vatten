@@ -330,25 +330,25 @@ async def get_settings(request: Request):
         # Return default settings
         return {
             "shared_code": "1234",
-            "shared_code_description": "Kod till nyckelskåpet i entrén",
-            "instructions_text": "Instruktioner för att koppla om vattensystemet",
+            "shared_code_description": "Code for the key box in the entrance",
+            "instructions_text": "Instructions for switching the water system in the property. Follow the steps below carefully.",
             "instructions_steps": [
                 {
                     "step": 1,
-                    "title": "Hämta nyckeln",
-                    "description": "Använd koden ovan för att öppna nyckelskåpet och hämta källarnyckeln.",
+                    "title": "Get the key",
+                    "description": "Use the code above to open the key box and retrieve the basement key.",
                     "image_url": "https://images.pexels.com/photos/2985875/pexels-photo-2985875.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
                 },
                 {
                     "step": 2,
-                    "title": "Gå till källaren",
-                    "description": "Använd nyckeln för att låsa upp källardörren och gå in till vattensystemet.",
+                    "title": "Go to the basement",
+                    "description": "Use the key to unlock the basement door and enter the water system area.",
                     "image_url": "https://images.pexels.com/photos/17182110/pexels-photo-17182110.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
                 },
                 {
                     "step": 3,
-                    "title": "Koppla om ventilerna",
-                    "description": "Identifiera de två vattenpumparna. Stäng ventilen till den trasiga pumpen och öppna ventilen till reservpumpen.",
+                    "title": "Switch the valves",
+                    "description": "Identify the two water pumps. Close the valve to the broken pump and open the valve to the backup pump.",
                     "image_url": "https://images.unsplash.com/photo-1774019883037-91f5d43e2890?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwxfHx3YXRlciUyMHB1bXAlMjBpbmR1c3RyaWFsfGVufDB8fHx8MTc3NDczNzUyNXww&ixlib=rb-4.1.0&q=85"
                 }
             ]
@@ -375,8 +375,8 @@ async def update_settings(request: Request, settings_data: SettingsUpdate):
     # Fill in defaults for missing fields
     defaults = {
         "shared_code": "1234",
-        "shared_code_description": "Kod till nyckelskåpet i entrén",
-        "instructions_text": "Instruktioner för att koppla om vattensystemet",
+        "shared_code_description": "Code for the key box in the entrance",
+        "instructions_text": "Instructions for switching the water system",
         "instructions_steps": []
     }
     
@@ -423,25 +423,25 @@ async def startup_event():
         await db.settings.insert_one({
             "type": "main",
             "shared_code": "1234",
-            "shared_code_description": "Kod till nyckelskåpet i entrén",
-            "instructions_text": "Instruktioner för att koppla om vattensystemet i fastigheten. Följ stegen nedan noggrant.",
+            "shared_code_description": "Code for the key box in the entrance",
+            "instructions_text": "Instructions for switching the water system in the property. Follow the steps below carefully.",
             "instructions_steps": [
                 {
                     "step": 1,
-                    "title": "Hämta nyckeln",
-                    "description": "Använd koden ovan för att öppna nyckelskåpet och hämta källarnyckeln.",
+                    "title": "Get the key",
+                    "description": "Use the code above to open the key box and retrieve the basement key.",
                     "image_url": "https://images.pexels.com/photos/2985875/pexels-photo-2985875.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
                 },
                 {
                     "step": 2,
-                    "title": "Gå till källaren",
-                    "description": "Använd nyckeln för att låsa upp källardörren och gå in till vattensystemet.",
+                    "title": "Go to the basement",
+                    "description": "Use the key to unlock the basement door and enter the water system area.",
                     "image_url": "https://images.pexels.com/photos/17182110/pexels-photo-17182110.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
                 },
                 {
                     "step": 3,
-                    "title": "Koppla om ventilerna",
-                    "description": "Identifiera de två vattenpumparna. Stäng ventilen till den trasiga pumpen och öppna ventilen till reservpumpen.",
+                    "title": "Switch the valves",
+                    "description": "Identify the two water pumps. Close the valve to the broken pump and open the valve to the backup pump.",
                     "image_url": "https://images.unsplash.com/photo-1774019883037-91f5d43e2890?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwxfHx3YXRlciUyMHB1bXAlMjBpbmR1c3RyaWFsfGVufDB8fHx8MTc3NDczNzUyNXww&ixlib=rb-4.1.0&q=85"
                 }
             ]
