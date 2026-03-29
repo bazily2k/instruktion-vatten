@@ -11,7 +11,9 @@ import {
   ChevronUp,
   Droplets,
   AlertTriangle,
-  QrCode
+  QrCode,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -58,6 +60,18 @@ export default function UserDashboard() {
 
   const toggleStep = (stepNum) => {
     setExpandedStep(expandedStep === stepNum ? null : stepNum);
+  };
+
+  // Helper to get media from step (handles both old and new format)
+  const getStepMedia = (step) => {
+    if (step.media && Array.isArray(step.media) && step.media.length > 0) {
+      return step.media;
+    }
+    // Fallback to old image_url format
+    if (step.image_url) {
+      return [{ type: 'image', url: step.image_url, caption: '' }];
+    }
+    return [];
   };
 
   if (authLoading || loading) {
@@ -186,53 +200,91 @@ export default function UserDashboard() {
 
           {/* Steps */}
           <div className="space-y-4">
-            {settings?.instructions_steps?.map((step, index) => (
-              <div 
-                key={step.step || index}
-                className="border border-[#E4E4E7]"
-                data-testid={`instruction-step-${step.step}`}
-              >
-                <button
-                  onClick={() => toggleStep(step.step)}
-                  className="w-full p-6 flex items-center gap-6 text-left hover:bg-[#F4F4F5] transition-colors tap-target"
+            {settings?.instructions_steps?.map((step, index) => {
+              const media = getStepMedia(step);
+              
+              return (
+                <div 
+                  key={step.step || index}
+                  className="border border-[#E4E4E7]"
+                  data-testid={`instruction-step-${step.step}`}
                 >
-                  <span className="step-number">
-                    {String(step.step).padStart(2, '0')}
-                  </span>
-                  <div className="flex-1">
-                    <h3 
-                      className="text-xl font-semibold tracking-tight"
-                      style={{ fontFamily: 'Chivo, sans-serif' }}
-                    >
-                      {step.title}
-                    </h3>
-                  </div>
-                  {expandedStep === step.step ? (
-                    <ChevronUp className="w-6 h-6 text-[#52525B]" />
-                  ) : (
-                    <ChevronDown className="w-6 h-6 text-[#52525B]" />
-                  )}
-                </button>
-                
-                {expandedStep === step.step && (
-                  <div className="px-6 pb-6 fade-in">
-                    <p className="text-[#52525B] text-lg mb-6 pl-[88px] sm:pl-[104px]">
-                      {step.description}
-                    </p>
-                    {step.image_url && (
-                      <div className="pl-[88px] sm:pl-[104px]">
-                        <img 
-                          src={step.image_url} 
-                          alt={step.title}
-                          className="w-full max-w-md border border-[#E4E4E7]"
-                          loading="lazy"
-                        />
-                      </div>
+                  <button
+                    onClick={() => toggleStep(step.step)}
+                    className="w-full p-6 flex items-center gap-6 text-left hover:bg-[#F4F4F5] transition-colors tap-target"
+                  >
+                    <span className="step-number">
+                      {String(step.step).padStart(2, '0')}
+                    </span>
+                    <div className="flex-1">
+                      <h3 
+                        className="text-xl font-semibold tracking-tight"
+                        style={{ fontFamily: 'Chivo, sans-serif' }}
+                      >
+                        {step.title}
+                      </h3>
+                      {media.length > 0 && (
+                        <p className="text-sm text-[#52525B] mt-1">
+                          {media.filter(m => m.type === 'image').length} image(s), {media.filter(m => m.type === 'document').length} document(s)
+                        </p>
+                      )}
+                    </div>
+                    {expandedStep === step.step ? (
+                      <ChevronUp className="w-6 h-6 text-[#52525B]" />
+                    ) : (
+                      <ChevronDown className="w-6 h-6 text-[#52525B]" />
                     )}
-                  </div>
-                )}
-              </div>
-            ))}
+                  </button>
+                  
+                  {expandedStep === step.step && (
+                    <div className="px-6 pb-6 fade-in">
+                      <p className="text-[#52525B] text-lg mb-6 pl-[88px] sm:pl-[104px]">
+                        {step.description}
+                      </p>
+                      
+                      {/* Media Display */}
+                      {media.length > 0 && (
+                        <div className="pl-[88px] sm:pl-[104px] space-y-4">
+                          {/* Images */}
+                          {media.filter(m => m.type === 'image').map((item, idx) => (
+                            <div key={`img-${idx}`}>
+                              <img 
+                                src={item.url} 
+                                alt={item.caption || step.title}
+                                className="w-full max-w-md border border-[#E4E4E7]"
+                                loading="lazy"
+                              />
+                              {item.caption && (
+                                <p className="text-sm text-[#52525B] mt-2">{item.caption}</p>
+                              )}
+                            </div>
+                          ))}
+                          
+                          {/* Documents */}
+                          {media.filter(m => m.type === 'document').length > 0 && (
+                            <div className="flex flex-wrap gap-3 mt-4">
+                              {media.filter(m => m.type === 'document').map((item, idx) => (
+                                <a 
+                                  key={`doc-${idx}`}
+                                  href={item.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 bg-[#F4F4F5] border border-[#E4E4E7] p-4 hover:bg-[#E4E4E7] transition-colors"
+                                >
+                                  <FileText className="w-6 h-6 text-[#0047FF]" />
+                                  <span className="font-medium">{item.name || 'Document'}</span>
+                                  <ExternalLink className="w-4 h-4 text-[#52525B]" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -264,21 +316,42 @@ export default function UserDashboard() {
             <p className="font-medium">{settings?.instructions_text}</p>
           </div>
 
-          {settings?.instructions_steps?.map((step) => (
-            <div key={step.step} className="mb-6 page-break-inside-avoid">
-              <h3 className="text-lg font-bold mb-2">
-                {String(step.step).padStart(2, '0')}. {step.title}
-              </h3>
-              <p className="text-gray-700 mb-3">{step.description}</p>
-              {step.image_url && (
-                <img 
-                  src={step.image_url} 
-                  alt={step.title}
-                  className="max-w-sm border"
-                />
-              )}
-            </div>
-          ))}
+          {settings?.instructions_steps?.map((step) => {
+            const media = getStepMedia(step);
+            
+            return (
+              <div key={step.step} className="mb-6 page-break-inside-avoid">
+                <h3 className="text-lg font-bold mb-2">
+                  {String(step.step).padStart(2, '0')}. {step.title}
+                </h3>
+                <p className="text-gray-700 mb-3">{step.description}</p>
+                
+                {/* Print images */}
+                {media.filter(m => m.type === 'image').map((item, idx) => (
+                  <div key={idx} className="mb-2">
+                    <img 
+                      src={item.url} 
+                      alt={item.caption || step.title}
+                      className="max-w-sm border"
+                    />
+                    {item.caption && <p className="text-xs text-gray-500">{item.caption}</p>}
+                  </div>
+                ))}
+                
+                {/* Print document links */}
+                {media.filter(m => m.type === 'document').length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm font-medium">Documents:</p>
+                    <ul className="list-disc list-inside text-sm">
+                      {media.filter(m => m.type === 'document').map((item, idx) => (
+                        <li key={idx}>{item.name || 'Document'}: {item.url}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </main>
 

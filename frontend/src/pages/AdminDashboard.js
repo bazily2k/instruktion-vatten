@@ -17,7 +17,10 @@ import {
   Check,
   Copy,
   ClipboardList,
-  RefreshCw
+  RefreshCw,
+  Image,
+  FileText,
+  Link
 } from 'lucide-react';
 import {
   Dialog,
@@ -29,6 +32,13 @@ import {
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -75,6 +85,19 @@ export default function AdminDashboard() {
     }
   }, [user, authLoading, navigate]);
 
+  // Helper to migrate old image_url format to new media array format
+  const migrateStepToMediaFormat = (step) => {
+    if (step.media && Array.isArray(step.media)) {
+      return step; // Already in new format
+    }
+    // Migrate from old format
+    const media = [];
+    if (step.image_url) {
+      media.push({ type: 'image', url: step.image_url, caption: '' });
+    }
+    return { ...step, media, image_url: undefined };
+  };
+
   const fetchAccessCodes = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/access-codes`, {
@@ -107,8 +130,13 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/api/settings`, {
         withCredentials: true
       });
-      setSettings(response.data);
-      setSettingsForm(response.data);
+      const data = response.data;
+      // Migrate steps to new media format
+      if (data.instructions_steps) {
+        data.instructions_steps = data.instructions_steps.map(migrateStepToMediaFormat);
+      }
+      setSettings(data);
+      setSettingsForm(data);
     } catch (err) {
       console.error('Failed to fetch settings:', err);
     } finally {
@@ -218,7 +246,7 @@ export default function AdminDashboard() {
       step: settingsForm.instructions_steps.length + 1,
       title: '',
       description: '',
-      image_url: ''
+      media: []
     };
     setSettingsForm({
       ...settingsForm,
@@ -236,6 +264,31 @@ export default function AdminDashboard() {
     const newSteps = settingsForm.instructions_steps.filter((_, i) => i !== index);
     // Renumber steps
     newSteps.forEach((step, i) => { step.step = i + 1; });
+    setSettingsForm({ ...settingsForm, instructions_steps: newSteps });
+  };
+
+  // Media functions for steps
+  const handleAddMedia = (stepIndex) => {
+    const newSteps = [...settingsForm.instructions_steps];
+    if (!newSteps[stepIndex].media) {
+      newSteps[stepIndex].media = [];
+    }
+    newSteps[stepIndex].media.push({ type: 'image', url: '', caption: '' });
+    setSettingsForm({ ...settingsForm, instructions_steps: newSteps });
+  };
+
+  const handleUpdateMedia = (stepIndex, mediaIndex, field, value) => {
+    const newSteps = [...settingsForm.instructions_steps];
+    newSteps[stepIndex].media[mediaIndex] = { 
+      ...newSteps[stepIndex].media[mediaIndex], 
+      [field]: value 
+    };
+    setSettingsForm({ ...settingsForm, instructions_steps: newSteps });
+  };
+
+  const handleRemoveMedia = (stepIndex, mediaIndex) => {
+    const newSteps = [...settingsForm.instructions_steps];
+    newSteps[stepIndex].media = newSteps[stepIndex].media.filter((_, i) => i !== mediaIndex);
     setSettingsForm({ ...settingsForm, instructions_steps: newSteps });
   };
 
@@ -545,18 +598,107 @@ export default function AdminDashboard() {
                                     placeholder="Description"
                                     className="w-full border-2 border-[#E4E4E7] p-2 rounded-none focus:border-[#0047FF] focus:outline-none"
                                   />
-                                  <Input
-                                    value={step.image_url}
-                                    onChange={(e) => handleUpdateStep(index, 'image_url', e.target.value)}
-                                    placeholder="Image URL"
-                                    className="rounded-none border-2 text-sm"
-                                  />
+                                  
+                                  {/* Media Section */}
+                                  <div className="border-t border-[#E4E4E7] pt-3 mt-3">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <span className="text-sm font-medium text-[#52525B]">IMAGES & DOCUMENTS</span>
+                                      <button
+                                        onClick={() => handleAddMedia(index)}
+                                        className="text-[#0047FF] hover:text-blue-800 flex items-center gap-1 text-sm font-medium"
+                                        data-testid={`add-media-step-${index}`}
+                                      >
+                                        <Plus className="w-4 h-4" />
+                                        Add Media
+                                      </button>
+                                    </div>
+                                    
+                                    {step.media && step.media.length > 0 ? (
+                                      <div className="space-y-3">
+                                        {step.media.map((media, mediaIndex) => (
+                                          <div key={mediaIndex} className="bg-[#F4F4F5] p-3 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                              <Select
+                                                value={media.type}
+                                                onValueChange={(value) => handleUpdateMedia(index, mediaIndex, 'type', value)}
+                                              >
+                                                <SelectTrigger className="w-32 rounded-none border-2">
+                                                  <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="image">
+                                                    <div className="flex items-center gap-2">
+                                                      <Image className="w-4 h-4" />
+                                                      Image
+                                                    </div>
+                                                  </SelectItem>
+                                                  <SelectItem value="document">
+                                                    <div className="flex items-center gap-2">
+                                                      <FileText className="w-4 h-4" />
+                                                      Document
+                                                    </div>
+                                                  </SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                              <Input
+                                                value={media.url}
+                                                onChange={(e) => handleUpdateMedia(index, mediaIndex, 'url', e.target.value)}
+                                                placeholder="URL"
+                                                className="flex-1 rounded-none border-2 text-sm"
+                                              />
+                                              <button
+                                                onClick={() => handleRemoveMedia(index, mediaIndex)}
+                                                className="p-2 hover:bg-[#FF204E] hover:text-white transition-colors"
+                                              >
+                                                <Trash2 className="w-4 h-4" />
+                                              </button>
+                                            </div>
+                                            <Input
+                                              value={media.caption || media.name || ''}
+                                              onChange={(e) => handleUpdateMedia(index, mediaIndex, media.type === 'image' ? 'caption' : 'name', e.target.value)}
+                                              placeholder={media.type === 'image' ? 'Caption (optional)' : 'Document name'}
+                                              className="rounded-none border-2 text-sm"
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-[#52525B] italic">No media added yet</p>
+                                    )}
+                                  </div>
                                 </>
                               ) : (
                                 <>
                                   <h3 className="font-semibold text-lg">{step.title}</h3>
                                   <p className="text-[#52525B]">{step.description}</p>
-                                  {step.image_url && (
+                                  {/* Display media in view mode */}
+                                  {step.media && step.media.length > 0 && (
+                                    <div className="flex flex-wrap gap-3 mt-3">
+                                      {step.media.map((media, mediaIndex) => (
+                                        <div key={mediaIndex}>
+                                          {media.type === 'image' ? (
+                                            <div>
+                                              <img src={media.url} alt={media.caption || step.title} className="max-w-xs border" />
+                                              {media.caption && <p className="text-xs text-[#52525B] mt-1">{media.caption}</p>}
+                                            </div>
+                                          ) : (
+                                            <a 
+                                              href={media.url} 
+                                              target="_blank" 
+                                              rel="noopener noreferrer"
+                                              className="flex items-center gap-2 bg-[#F4F4F5] p-3 hover:bg-[#E4E4E7] transition-colors"
+                                            >
+                                              <FileText className="w-5 h-5 text-[#0047FF]" />
+                                              <span className="text-sm font-medium">{media.name || 'Document'}</span>
+                                              <Link className="w-4 h-4 text-[#52525B]" />
+                                            </a>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {/* Fallback for old image_url format */}
+                                  {!step.media && step.image_url && (
                                     <img src={step.image_url} alt={step.title} className="max-w-xs border" />
                                   )}
                                 </>
