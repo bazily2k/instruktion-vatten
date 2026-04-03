@@ -185,8 +185,26 @@ async def admin_login(response: Response, login_data: AdminLogin):
     access_token = create_access_token(str(user["_id"]), email, "admin")
     refresh_token = create_refresh_token(str(user["_id"]))
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    # Set cookies - use secure=True for HTTPS in production
+    is_production = "emergentagent.com" in os.environ.get("FRONTEND_URL", "")
+    response.set_cookie(
+        key="access_token", 
+        value=access_token, 
+        httponly=True, 
+        secure=is_production, 
+        samesite="none" if is_production else "lax", 
+        max_age=3600, 
+        path="/"
+    )
+    response.set_cookie(
+        key="refresh_token", 
+        value=refresh_token, 
+        httponly=True, 
+        secure=is_production, 
+        samesite="none" if is_production else "lax", 
+        max_age=604800, 
+        path="/"
+    )
     
     return {
         "id": str(user["_id"]),
@@ -227,8 +245,26 @@ async def user_login(response: Response, request: Request, login_data: UserCodeL
     access_token = create_access_token(access_code["id"], "", "user")
     refresh_token = create_refresh_token(access_code["id"])
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    # Set cookies - use secure=True for HTTPS in production
+    is_production = "emergentagent.com" in os.environ.get("FRONTEND_URL", "")
+    response.set_cookie(
+        key="access_token", 
+        value=access_token, 
+        httponly=True, 
+        secure=is_production, 
+        samesite="none" if is_production else "lax", 
+        max_age=3600, 
+        path="/"
+    )
+    response.set_cookie(
+        key="refresh_token", 
+        value=refresh_token, 
+        httponly=True, 
+        secure=is_production, 
+        samesite="none" if is_production else "lax", 
+        max_age=604800, 
+        path="/"
+    )
     
     return {
         "id": access_code["id"],
