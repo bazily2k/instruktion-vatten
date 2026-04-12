@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -20,7 +20,10 @@ import {
   RefreshCw,
   Image,
   FileText,
-  Link
+  Link,
+  Upload,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import {
   Dialog,
@@ -72,6 +75,10 @@ export default function AdminDashboard() {
   // Login Logs State
   const [loginLogs, setLoginLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(true);
+
+  // File upload state
+  const [uploadingMedia, setUploadingMedia] = useState(null); // {stepIndex, mediaIndex} or {stepIndex, new: true}
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -292,6 +299,71 @@ export default function AdminDashboard() {
     setSettingsForm({ ...settingsForm, instructions_steps: newSteps });
   };
 
+  // File upload functions
+  const handleFileUploadClick = (stepIndex, mediaIndex = null) => {
+    setUploadingMedia({ stepIndex, mediaIndex });
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !uploadingMedia) return;
+
+    const { stepIndex, mediaIndex } = uploadingMedia;
+
+    try {
+      // Show loading state
+      setUploadingMedia({ ...uploadingMedia, loading: true });
+
+      // Upload file
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(`${API_URL}/api/upload`, formData, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const fileUrl = `${API_URL}${response.data.url}`;
+      const isImage = file.type.startsWith('image/');
+      const mediaType = isImage ? 'image' : 'document';
+
+      const newSteps = [...settingsForm.instructions_steps];
+      
+      if (mediaIndex !== null) {
+        // Update existing media
+        newSteps[stepIndex].media[mediaIndex] = {
+          type: mediaType,
+          url: fileUrl,
+          caption: isImage ? '' : file.name,
+          name: file.name
+        };
+      } else {
+        // Add new media
+        if (!newSteps[stepIndex].media) {
+          newSteps[stepIndex].media = [];
+        }
+        newSteps[stepIndex].media.push({
+          type: mediaType,
+          url: fileUrl,
+          caption: isImage ? '' : file.name,
+          name: file.name
+        });
+      }
+
+      setSettingsForm({ ...settingsForm, instructions_steps: newSteps });
+    } catch (err) {
+      console.error('File upload failed:', err);
+      alert('File upload failed. Please try again.');
+    } finally {
+      setUploadingMedia(null);
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -305,6 +377,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#F4F4F5]" data-testid="admin-dashboard">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+        className="hidden"
+        capture="environment"
+      />
+
       {/* Header */}
       <header className="bg-white border-b border-[#E4E4E7] p-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -603,14 +685,29 @@ export default function AdminDashboard() {
                                   <div className="border-t border-[#E4E4E7] pt-3 mt-3">
                                     <div className="flex items-center justify-between mb-3">
                                       <span className="text-sm font-medium text-[#52525B]">IMAGES & DOCUMENTS</span>
-                                      <button
-                                        onClick={() => handleAddMedia(index)}
-                                        className="text-[#0047FF] hover:text-blue-800 flex items-center gap-1 text-sm font-medium"
-                                        data-testid={`add-media-step-${index}`}
-                                      >
-                                        <Plus className="w-4 h-4" />
-                                        Add Media
-                                      </button>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => handleFileUploadClick(index)}
+                                          disabled={uploadingMedia?.loading}
+                                          className="text-[#0047FF] hover:text-blue-800 flex items-center gap-1 text-sm font-medium bg-blue-50 px-3 py-1.5 border border-[#0047FF]"
+                                          data-testid={`upload-media-step-${index}`}
+                                        >
+                                          {uploadingMedia?.stepIndex === index && uploadingMedia?.loading ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                          ) : (
+                                            <Upload className="w-4 h-4" />
+                                          )}
+                                          Upload File
+                                        </button>
+                                        <button
+                                          onClick={() => handleAddMedia(index)}
+                                          className="text-[#52525B] hover:text-[#09090B] flex items-center gap-1 text-sm"
+                                          data-testid={`add-media-step-${index}`}
+                                        >
+                                          <Link className="w-4 h-4" />
+                                          Add URL
+                                        </button>
+                                      </div>
                                     </div>
                                     
                                     {step.media && step.media.length > 0 ? (
@@ -647,6 +744,14 @@ export default function AdminDashboard() {
                                                 className="flex-1 rounded-none border-2 text-sm"
                                               />
                                               <button
+                                                onClick={() => handleFileUploadClick(index, mediaIndex)}
+                                                disabled={uploadingMedia?.loading}
+                                                className="p-2 hover:bg-blue-100 transition-colors text-[#0047FF]"
+                                                title="Upload new file"
+                                              >
+                                                <Upload className="w-4 h-4" />
+                                              </button>
+                                              <button
                                                 onClick={() => handleRemoveMedia(index, mediaIndex)}
                                                 className="p-2 hover:bg-[#FF204E] hover:text-white transition-colors"
                                               >
@@ -659,11 +764,24 @@ export default function AdminDashboard() {
                                               placeholder={media.type === 'image' ? 'Caption (optional)' : 'Document name'}
                                               className="rounded-none border-2 text-sm"
                                             />
+                                            {/* Preview for images */}
+                                            {media.type === 'image' && media.url && (
+                                              <img 
+                                                src={media.url} 
+                                                alt={media.caption || 'Preview'} 
+                                                className="max-w-[200px] max-h-[150px] object-cover border"
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                              />
+                                            )}
                                           </div>
                                         ))}
                                       </div>
                                     ) : (
-                                      <p className="text-sm text-[#52525B] italic">No media added yet</p>
+                                      <div className="text-center py-6 border-2 border-dashed border-[#E4E4E7]">
+                                        <Camera className="w-8 h-8 text-[#E4E4E7] mx-auto mb-2" />
+                                        <p className="text-sm text-[#52525B]">No media added yet</p>
+                                        <p className="text-xs text-[#52525B] mt-1">Click "Upload File" to add from camera or device</p>
+                                      </div>
                                     )}
                                   </div>
                                 </>

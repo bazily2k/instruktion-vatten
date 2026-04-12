@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends, Response, UploadFile, File
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -17,6 +17,7 @@ import bcrypt
 import jwt
 import secrets
 from bson import ObjectId
+import requests
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -28,6 +29,62 @@ JWT_ALGORITHM = "HS256"
 
 def get_jwt_secret() -> str:
     return os.environ["JWT_SECRET"]
+
+# Object Storage Configuration
+STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
+APP_NAME = "connection-guide"
+storage_key = None
+
+def init_storage():
+    """Initialize storage and get reusable storage key."""
+    global storage_key
+    if storage_key:
+        return storage_key
+    emergent_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not emergent_key:
+        raise Exception("EMERGENT_LLM_KEY not set")
+    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": emergent_key}, timeout=30)
+    resp.raise_for_status()
+    storage_key = resp.json()["storage_key"]
+    return storage_key
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    """Upload file to object storage."""
+    key = init_storage()
+    resp = requests.put(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key, "Content-Type": content_type},
+        data=data,
+        timeout=120
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+def get_object(path: str) -> tuple:
+    """Download file from object storage."""
+    key = init_storage()
+    resp = requests.get(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key},
+        timeout=60
+    )
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+# MIME types for common file types
+MIME_TYPES = {
+    "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+    "gif": "image/gif", "webp": "image/webp", "heic": "image/heic",
+    "pdf": "application/pdf", 
+    "doc": "application/msword",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "xls": "application/vnd.ms-excel",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "txt": "text/plain"
+}
+
+ALLOWED_EXTENSIONS = set(MIME_TYPES.keys())
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 # Create the main app
 app = FastAPI()
@@ -282,6 +339,108 @@ async def logout(response: Response):
     response.delete_cookie(key="access_token", path="/")
     response.delete_cookie(key="refresh_token", path="/")
     return {"message": "Logged out successfully"}
+
+# ============ FILE UPLOAD ENDPOINTS (Admin only) ============
+
+@api_router.post("/upload")
+async def upload_file(request: Request, file: UploadFile = File(...)):
+    """Upload a file (image or document) and return the file info."""
+    await require_admin(request)
+    
+    # Validate file extension
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+    
+    ext = file.filename.split(".")[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Read file content
+    content = await file.read()
+    
+    # Validate file size
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB")
+    
+    # Generate unique path
+    file_id = str(uuid.uuid4())
+    path = f"{APP_NAME}/uploads/{file_id}.{ext}"
+    
+    # Determine content type
+    content_type = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
+    
+    try:
+        # Upload to storage
+        result = put_object(path, content, content_type)
+        
+        # Store file reference in database
+        file_record = {
+            "id": file_id,
+            "storage_path": result["path"],
+            "original_filename": file.filename,
+            "content_type": content_type,
+            "size": result.get("size", len(content)),
+            "extension": ext,
+            "is_deleted": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.files.insert_one(file_record)
+        
+        # Return file info
+        return {
+            "id": file_id,
+            "filename": file.filename,
+            "content_type": content_type,
+            "size": file_record["size"],
+            "url": f"/api/files/{file_id}"
+        }
+    except Exception as e:
+        logger.error(f"File upload failed: {e}")
+        raise HTTPException(status_code=500, detail="File upload failed")
+
+@api_router.get("/files/{file_id}")
+async def get_file(file_id: str, request: Request):
+    """Download a file by ID."""
+    # Allow authenticated users to view files
+    await get_current_user(request)
+    
+    # Find file record
+    file_record = await db.files.find_one({"id": file_id, "is_deleted": False})
+    if not file_record:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    try:
+        # Get file from storage
+        content, content_type = get_object(file_record["storage_path"])
+        
+        return Response(
+            content=content,
+            media_type=file_record.get("content_type", content_type),
+            headers={
+                "Content-Disposition": f'inline; filename="{file_record.get("original_filename", "file")}"'
+            }
+        )
+    except Exception as e:
+        logger.error(f"File download failed: {e}")
+        raise HTTPException(status_code=500, detail="File download failed")
+
+@api_router.delete("/files/{file_id}")
+async def delete_file(file_id: str, request: Request):
+    """Soft delete a file."""
+    await require_admin(request)
+    
+    result = await db.files.update_one(
+        {"id": file_id, "is_deleted": False},
+        {"$set": {"is_deleted": True, "deleted_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return {"message": "File deleted successfully"}
 
 # ============ ACCESS CODES ENDPOINTS (Admin only) ============
 
