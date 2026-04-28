@@ -17,7 +17,6 @@ import bcrypt
 import jwt
 import secrets
 from bson import ObjectId
-import requests
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -30,52 +29,14 @@ JWT_ALGORITHM = "HS256"
 def get_jwt_secret() -> str:
     return os.environ["JWT_SECRET"]
 
-# Object Storage Configuration
-STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
-APP_NAME = "connection-guide"
-storage_key = None
+# Local file storage
+UPLOAD_DIR = Path("/app/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-def init_storage():
-    """Initialize storage and get reusable storage key."""
-    global storage_key
-    if storage_key:
-        return storage_key
-    emergent_key = os.environ.get("EMERGENT_LLM_KEY")
-    if not emergent_key:
-        raise Exception("EMERGENT_LLM_KEY not set")
-    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": emergent_key}, timeout=30)
-    resp.raise_for_status()
-    storage_key = resp.json()["storage_key"]
-    return storage_key
-
-def put_object(path: str, data: bytes, content_type: str) -> dict:
-    """Upload file to object storage."""
-    key = init_storage()
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data,
-        timeout=120
-    )
-    resp.raise_for_status()
-    return resp.json()
-
-def get_object(path: str) -> tuple:
-    """Download file from object storage."""
-    key = init_storage()
-    resp = requests.get(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key},
-        timeout=60
-    )
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
-
-# MIME types for common file types
 MIME_TYPES = {
     "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
     "gif": "image/gif", "webp": "image/webp", "heic": "image/heic",
-    "pdf": "application/pdf", 
+    "pdf": "application/pdf",
     "doc": "application/msword",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "xls": "application/vnd.ms-excel",
@@ -84,7 +45,21 @@ MIME_TYPES = {
 }
 
 ALLOWED_EXTENSIONS = set(MIME_TYPES.keys())
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    file_path = UPLOAD_DIR / path
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_bytes(data)
+    return {"path": path, "size": len(data)}
+
+def get_object(path: str) -> tuple:
+    file_path = UPLOAD_DIR / path
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+    ext = path.split(".")[-1].lower()
+    content_type = MIME_TYPES.get(ext, "application/octet-stream")
+    return file_path.read_bytes(), content_type
 
 # Create the main app
 app = FastAPI()
@@ -195,9 +170,7 @@ async def get_current_user(request: Request) -> dict:
         payload = jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
         if payload.get("type") != "access":
             raise HTTPException(status_code=401, detail="Invalid token type")
-        
         role = payload.get("role", "user")
-        
         if role == "admin":
             user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
             if not user:
@@ -209,7 +182,6 @@ async def get_current_user(request: Request) -> dict:
                 "role": "admin"
             }
         else:
-            # User logged in with access code
             access_code = await db.access_codes.find_one({"id": payload["sub"]})
             if not access_code:
                 raise HTTPException(status_code=401, detail="Access code not found")
@@ -235,60 +207,24 @@ async def require_admin(request: Request) -> dict:
 async def admin_login(response: Response, login_data: AdminLogin):
     email = login_data.email.lower()
     user = await db.users.find_one({"email": email})
-    
     if not user or not verify_password(login_data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    
     access_token = create_access_token(str(user["_id"]), email, "admin")
     refresh_token = create_refresh_token(str(user["_id"]))
-    
-    # Set cookies - use secure=True for HTTPS in production
-    is_production = "emergentagent.com" in os.environ.get("FRONTEND_URL", "")
-    response.set_cookie(
-        key="access_token", 
-        value=access_token, 
-        httponly=True, 
-        secure=is_production, 
-        samesite="none" if is_production else "lax", 
-        max_age=3600, 
-        path="/"
-    )
-    response.set_cookie(
-        key="refresh_token", 
-        value=refresh_token, 
-        httponly=True, 
-        secure=is_production, 
-        samesite="none" if is_production else "lax", 
-        max_age=604800, 
-        path="/"
-    )
-    
-    return {
-        "id": str(user["_id"]),
-        "email": user["email"],
-        "name": user.get("name", "Admin"),
-        "role": "admin"
-    }
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    return {"id": str(user["_id"]), "email": user["email"], "name": user.get("name", "Admin"), "role": "admin"}
 
 @api_router.post("/auth/user/login")
 async def user_login(response: Response, request: Request, login_data: UserCodeLogin):
     code = login_data.code.strip().upper()
     access_code = await db.access_codes.find_one({"code": code, "is_active": True})
-    
     if not access_code:
         raise HTTPException(status_code=401, detail="Invalid or inactive access code")
-    
-    # Update last_used
-    await db.access_codes.update_one(
-        {"id": access_code["id"]},
-        {"$set": {"last_used": datetime.now(timezone.utc).isoformat()}}
-    )
-    
-    # Log the login
+    await db.access_codes.update_one({"id": access_code["id"]}, {"$set": {"last_used": datetime.now(timezone.utc).isoformat()}})
     client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
     if client_ip and "," in client_ip:
         client_ip = client_ip.split(",")[0].strip()
-    
     login_log = {
         "id": str(uuid.uuid4()),
         "user_id": access_code["id"],
@@ -298,41 +234,15 @@ async def user_login(response: Response, request: Request, login_data: UserCodeL
         "ip_address": client_ip
     }
     await db.login_logs.insert_one(login_log)
-    
     access_token = create_access_token(access_code["id"], "", "user")
     refresh_token = create_refresh_token(access_code["id"])
-    
-    # Set cookies - use secure=True for HTTPS in production
-    is_production = "emergentagent.com" in os.environ.get("FRONTEND_URL", "")
-    response.set_cookie(
-        key="access_token", 
-        value=access_token, 
-        httponly=True, 
-        secure=is_production, 
-        samesite="none" if is_production else "lax", 
-        max_age=3600, 
-        path="/"
-    )
-    response.set_cookie(
-        key="refresh_token", 
-        value=refresh_token, 
-        httponly=True, 
-        secure=is_production, 
-        samesite="none" if is_production else "lax", 
-        max_age=604800, 
-        path="/"
-    )
-    
-    return {
-        "id": access_code["id"],
-        "name": access_code.get("name", ""),
-        "role": "user"
-    }
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    return {"id": access_code["id"], "name": access_code.get("name", ""), "role": "user"}
 
 @api_router.get("/auth/me")
 async def get_me(request: Request):
-    user = await get_current_user(request)
-    return user
+    return await get_current_user(request)
 
 @api_router.post("/auth/logout")
 async def logout(response: Response):
@@ -340,43 +250,24 @@ async def logout(response: Response):
     response.delete_cookie(key="refresh_token", path="/")
     return {"message": "Logged out successfully"}
 
-# ============ FILE UPLOAD ENDPOINTS (Admin only) ============
+# ============ FILE UPLOAD ENDPOINTS ============
 
 @api_router.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
-    """Upload a file (image or document) and return the file info."""
     await require_admin(request)
-    
-    # Validate file extension
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
-    
     ext = file.filename.split(".")[-1].lower() if "." in file.filename else ""
     if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
-        )
-    
-    # Read file content
+        raise HTTPException(status_code=400, detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
     content = await file.read()
-    
-    # Validate file size
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB")
-    
-    # Generate unique path
     file_id = str(uuid.uuid4())
-    path = f"{APP_NAME}/uploads/{file_id}.{ext}"
-    
-    # Determine content type
+    path = f"{file_id}.{ext}"
     content_type = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
-    
     try:
-        # Upload to storage
         result = put_object(path, content, content_type)
-        
-        # Store file reference in database
         file_record = {
             "id": file_id,
             "storage_path": result["path"],
@@ -388,40 +279,23 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.files.insert_one(file_record)
-        
-        # Return file info
-        return {
-            "id": file_id,
-            "filename": file.filename,
-            "content_type": content_type,
-            "size": file_record["size"],
-            "url": f"/api/files/{file_id}"
-        }
+        return {"id": file_id, "filename": file.filename, "content_type": content_type, "size": file_record["size"], "url": f"/api/files/{file_id}"}
     except Exception as e:
         logger.error(f"File upload failed: {e}")
         raise HTTPException(status_code=500, detail="File upload failed")
 
 @api_router.get("/files/{file_id}")
 async def get_file(file_id: str, request: Request):
-    """Download a file by ID."""
-    # Allow authenticated users to view files
     await get_current_user(request)
-    
-    # Find file record
     file_record = await db.files.find_one({"id": file_id, "is_deleted": False})
     if not file_record:
         raise HTTPException(status_code=404, detail="File not found")
-    
     try:
-        # Get file from storage
         content, content_type = get_object(file_record["storage_path"])
-        
         return Response(
             content=content,
             media_type=file_record.get("content_type", content_type),
-            headers={
-                "Content-Disposition": f'inline; filename="{file_record.get("original_filename", "file")}"'
-            }
+            headers={"Content-Disposition": f'inline; filename="{file_record.get("original_filename", "file")}"'}
         )
     except Exception as e:
         logger.error(f"File download failed: {e}")
@@ -429,20 +303,13 @@ async def get_file(file_id: str, request: Request):
 
 @api_router.delete("/files/{file_id}")
 async def delete_file(file_id: str, request: Request):
-    """Soft delete a file."""
     await require_admin(request)
-    
-    result = await db.files.update_one(
-        {"id": file_id, "is_deleted": False},
-        {"$set": {"is_deleted": True, "deleted_at": datetime.now(timezone.utc).isoformat()}}
-    )
-    
+    result = await db.files.update_one({"id": file_id, "is_deleted": False}, {"$set": {"is_deleted": True, "deleted_at": datetime.now(timezone.utc).isoformat()}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="File not found")
-    
     return {"message": "File deleted successfully"}
 
-# ============ ACCESS CODES ENDPOINTS (Admin only) ============
+# ============ ACCESS CODES ENDPOINTS ============
 
 @api_router.get("/access-codes", response_model=List[AccessCodeResponse])
 async def get_access_codes(request: Request):
@@ -450,23 +317,12 @@ async def get_access_codes(request: Request):
     codes = await db.access_codes.find({}, {"_id": 0}).to_list(1000)
     return codes
 
-# ============ LOGIN LOGS ENDPOINTS (Admin only) ============
-
-@api_router.get("/login-logs", response_model=List[LoginLogResponse])
-async def get_login_logs(request: Request, limit: int = 100):
-    await require_admin(request)
-    logs = await db.login_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
-    return logs
-
 @api_router.post("/access-codes", response_model=AccessCodeResponse)
 async def create_access_code(request: Request, code_data: AccessCodeCreate):
     await require_admin(request)
-    
-    # Check if code already exists
     existing = await db.access_codes.find_one({"code": code_data.code.upper()})
     if existing:
         raise HTTPException(status_code=400, detail="Access code already exists")
-    
     new_code = {
         "id": str(uuid.uuid4()),
         "name": code_data.name,
@@ -476,7 +332,6 @@ async def create_access_code(request: Request, code_data: AccessCodeCreate):
         "created_at": datetime.now(timezone.utc).isoformat(),
         "last_used": None
     }
-    
     await db.access_codes.insert_one(new_code)
     del new_code["_id"]
     return new_code
@@ -484,194 +339,106 @@ async def create_access_code(request: Request, code_data: AccessCodeCreate):
 @api_router.put("/access-codes/{code_id}", response_model=AccessCodeResponse)
 async def update_access_code(request: Request, code_id: str, code_data: AccessCodeUpdate):
     await require_admin(request)
-    
     update_data = {k: v for k, v in code_data.model_dump().items() if v is not None}
     if "code" in update_data:
         update_data["code"] = update_data["code"].upper()
-    
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
-    
-    result = await db.access_codes.update_one(
-        {"id": code_id},
-        {"$set": update_data}
-    )
-    
+    result = await db.access_codes.update_one({"id": code_id}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Access code not found")
-    
     updated_code = await db.access_codes.find_one({"id": code_id}, {"_id": 0})
     return updated_code
 
 @api_router.delete("/access-codes/{code_id}")
 async def delete_access_code(request: Request, code_id: str):
     await require_admin(request)
-    
     result = await db.access_codes.delete_one({"id": code_id})
-    
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Access code not found")
-    
     return {"message": "Access code deleted successfully"}
+
+# ============ LOGIN LOGS ENDPOINTS ============
+
+@api_router.get("/login-logs", response_model=List[LoginLogResponse])
+async def get_login_logs(request: Request, limit: int = 100):
+    await require_admin(request)
+    logs = await db.login_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
+    return logs
 
 # ============ SETTINGS ENDPOINTS ============
 
 @api_router.get("/settings", response_model=SettingsResponse)
 async def get_settings(request: Request):
-    await get_current_user(request)  # Any authenticated user can view settings
-    
+    await get_current_user(request)
     settings = await db.settings.find_one({"type": "main"}, {"_id": 0})
     if not settings:
-        # Return default settings
         return {
             "shared_code": "1234",
-            "shared_code_description": "Code for the key box in the entrance",
-            "instructions_text": "Instructions for switching the water system in the property. Follow the steps below carefully.",
-            "instructions_steps": [
-                {
-                    "step": 1,
-                    "title": "Get the key",
-                    "description": "Use the code above to open the key box and retrieve the basement key.",
-                    "image_url": "https://images.pexels.com/photos/2985875/pexels-photo-2985875.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
-                },
-                {
-                    "step": 2,
-                    "title": "Go to the basement",
-                    "description": "Use the key to unlock the basement door and enter the water system area.",
-                    "image_url": "https://images.pexels.com/photos/17182110/pexels-photo-17182110.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
-                },
-                {
-                    "step": 3,
-                    "title": "Switch the valves",
-                    "description": "Identify the two water pumps. Close the valve to the broken pump and open the valve to the backup pump.",
-                    "image_url": "https://images.unsplash.com/photo-1774019883037-91f5d43e2890?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwxfHx3YXRlciUyMHB1bXAlMjBpbmR1c3RyaWFsfGVufDB8fHx8MTc3NDczNzUyNXww&ixlib=rb-4.1.0&q=85"
-                }
-            ]
+            "shared_code_description": "Kod till nyckelskåpet vid entrén",
+            "instructions_text": "Instruktioner för att växla vattenkälla.",
+            "instructions_steps": []
         }
     return settings
 
 @api_router.put("/settings", response_model=SettingsResponse)
 async def update_settings(request: Request, settings_data: SettingsUpdate):
     await require_admin(request)
-    
     update_data = {k: v for k, v in settings_data.model_dump().items() if v is not None}
-    
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
-    
-    await db.settings.update_one(
-        {"type": "main"},
-        {"$set": update_data},
-        upsert=True
-    )
-    
+    await db.settings.update_one({"type": "main"}, {"$set": update_data}, upsert=True)
     settings = await db.settings.find_one({"type": "main"}, {"_id": 0})
-    
-    # Fill in defaults for missing fields
-    defaults = {
-        "shared_code": "1234",
-        "shared_code_description": "Code for the key box in the entrance",
-        "instructions_text": "Instructions for switching the water system",
-        "instructions_steps": []
-    }
-    
+    defaults = {"shared_code": "1234", "shared_code_description": "", "instructions_text": "", "instructions_steps": []}
     for key, default_value in defaults.items():
         if key not in settings:
             settings[key] = default_value
-    
     return settings
 
 # ============ STARTUP & SHUTDOWN ============
 
 @app.on_event("startup")
 async def startup_event():
-    # Create indexes
     await db.users.create_index("email", unique=True)
     await db.access_codes.create_index("code", unique=True)
     await db.access_codes.create_index("id", unique=True)
-    
-    # Seed admin
+
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
-    
+
     existing = await db.users.find_one({"email": admin_email})
     if existing is None:
-        hashed = hash_password(admin_password)
         await db.users.insert_one({
             "email": admin_email,
-            "password_hash": hashed,
+            "password_hash": hash_password(admin_password),
             "name": "Admin",
             "role": "admin",
             "created_at": datetime.now(timezone.utc).isoformat()
         })
         logger.info(f"Admin user created: {admin_email}")
     elif not verify_password(admin_password, existing["password_hash"]):
-        await db.users.update_one(
-            {"email": admin_email},
-            {"$set": {"password_hash": hash_password(admin_password)}}
-        )
+        await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
         logger.info(f"Admin password updated: {admin_email}")
-    
-    # Initialize default settings if not exists
+
     existing_settings = await db.settings.find_one({"type": "main"})
     if not existing_settings:
         await db.settings.insert_one({
             "type": "main",
             "shared_code": "1234",
-            "shared_code_description": "Code for the key box in the entrance",
-            "instructions_text": "Instructions for switching the water system in the property. Follow the steps below carefully.",
-            "instructions_steps": [
-                {
-                    "step": 1,
-                    "title": "Get the key",
-                    "description": "Use the code above to open the key box and retrieve the basement key.",
-                    "image_url": "https://images.pexels.com/photos/2985875/pexels-photo-2985875.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
-                },
-                {
-                    "step": 2,
-                    "title": "Go to the basement",
-                    "description": "Use the key to unlock the basement door and enter the water system area.",
-                    "image_url": "https://images.pexels.com/photos/17182110/pexels-photo-17182110.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
-                },
-                {
-                    "step": 3,
-                    "title": "Switch the valves",
-                    "description": "Identify the two water pumps. Close the valve to the broken pump and open the valve to the backup pump.",
-                    "image_url": "https://images.unsplash.com/photo-1774019883037-91f5d43e2890?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwxfHx3YXRlciUyMHB1bXAlMjBpbmR1c3RyaWFsfGVufDB8fHx8MTc3NDczNzUyNXww&ixlib=rb-4.1.0&q=85"
-                }
-            ]
+            "shared_code_description": "Kod till nyckelskåpet vid entrén",
+            "instructions_text": "Instruktioner för att växla vattenkälla i fastigheten.",
+            "instructions_steps": []
         })
         logger.info("Default settings initialized")
-    
-    # Write test credentials
-    try:
-        os.makedirs("/app/memory", exist_ok=True)
-        with open("/app/memory/test_credentials.md", "w") as f:
-            f.write("# Test Credentials\n\n")
-            f.write("## Admin Account\n")
-            f.write(f"- Email: {admin_email}\n")
-            f.write(f"- Password: {admin_password}\n")
-            f.write("- Role: admin\n\n")
-            f.write("## Auth Endpoints\n")
-            f.write("- POST /api/auth/admin/login - Admin login\n")
-            f.write("- POST /api/auth/user/login - User login with code\n")
-            f.write("- GET /api/auth/me - Get current user\n")
-            f.write("- POST /api/auth/logout - Logout\n")
-    except Exception as e:
-        logger.error(f"Failed to write test credentials: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
 
-# Include the router in the main app
 app.include_router(api_router)
 
 cors_origins = os.environ.get("CORS_ORIGINS", "*")
-if cors_origins == "*":
-    allow_origins = ["*"]
-else:
-    allow_origins = [origin.strip() for origin in cors_origins.split(",")]
+allow_origins = ["*"] if cors_origins == "*" else [o.strip() for o in cors_origins.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
