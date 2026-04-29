@@ -39,7 +39,7 @@ export default function AdminLogin() {
           <div className="flex items-center gap-3">
             <Droplets className="w-8 h-8 text-[#0047FF]" />
             <span className="font-bold text-xl tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-              CONNECTION GUIDE
+              WATER PUMP GUIDE
             </span>
           </div>
           <Link 
