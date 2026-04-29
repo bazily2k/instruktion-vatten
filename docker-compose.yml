@@ -1,0 +1,37 @@
+services:
+  mongodb:
+    image: mongo:7
+    restart: always
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: kallehobbe*99
+
+  backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URL: mongodb://admin:kallehobbe*99@mongodb:27017
+      DB_NAME: instruktion_vatten
+      JWT_SECRET: xK9mP2vL8nQ5rT3wY7uJ1
+      ADMIN_EMAIL: rolsmo23.36297@gmail.com
+      ADMIN_PASSWORD: "JJ5Ab7Q@XnGr?9PP"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      - mongodb
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
+  uploads_data:
