@@ -107,7 +107,7 @@ export default function UserDashboard() {
           <div className="flex items-center gap-3">
             <Droplets className="w-8 h-8 text-[#0047FF]" />
             <span className="font-bold text-xl tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
-              CONNECTION GUIDE
+              WATER PUMP GUIDE
             </span>
           </div>
           <button 
@@ -291,7 +291,7 @@ export default function UserDashboard() {
         {/* Print-only full content */}
         <div className="hidden print:block">
           <h1 className="text-3xl font-black mb-6" style={{ fontFamily: 'Chivo, sans-serif' }}>
-            CONNECTION GUIDE - WATER SYSTEM
+            WATER PUMP GUIDE
           </h1>
           
           <div className="flex justify-between items-start mb-8">
