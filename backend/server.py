@@ -225,7 +225,11 @@ async def admin_login(response: Response, request: Request, login_data: AdminLog
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "ip_address": client_ip
     }
-    await db.login_logs.insert_one(login_log)
+    try:
+        await db.login_logs.insert_one(login_log)
+        logger.info(f"Admin login logged for {email}")
+    except Exception as e:
+        logger.error(f"Failed to log admin login: {e}")
     return {"id": str(user["_id"]), "email": user["email"], "name": user.get("name", "Admin"), "role": "admin"}
 
 @api_router.post("/auth/user/login")
