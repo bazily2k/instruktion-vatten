@@ -211,8 +211,8 @@ async def admin_login(response: Response, login_data: AdminLogin):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     access_token = create_access_token(str(user["_id"]), email, "admin")
     refresh_token = create_refresh_token(str(user["_id"]))
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="none", max_age=3600, path="/")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="none", max_age=604800, path="/")
     return {"id": str(user["_id"]), "email": user["email"], "name": user.get("name", "Admin"), "role": "admin"}
 
 @api_router.post("/auth/user/login")
@@ -236,8 +236,8 @@ async def user_login(response: Response, request: Request, login_data: UserCodeL
     await db.login_logs.insert_one(login_log)
     access_token = create_access_token(access_code["id"], "", "user")
     refresh_token = create_refresh_token(access_code["id"])
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="none", max_age=3600, path="/")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="none", max_age=604800, path="/")
     return {"id": access_code["id"], "name": access_code.get("name", ""), "role": "user"}
 
 @api_router.get("/auth/me")
