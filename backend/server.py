@@ -209,10 +209,23 @@ async def admin_login(response: Response, login_data: AdminLogin):
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(login_data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+        
     access_token = create_access_token(str(user["_id"]), email, "admin")
     refresh_token = create_refresh_token(str(user["_id"]))
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="none", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="none", max_age=604800, path="/")
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="none", max_age=3600, path="/")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="none", max_age=604800, path="/")
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown")
+    if client_ip and "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    login_log = {
+        "id": str(uuid.uuid4()),
+        "user_id": str(user["_id"]),
+        "user_name": user.get("name", "Admin"),
+        "user_code": email,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ip_address": client_ip
+    }
+    await db.login_logs.insert_one(login_log)
     return {"id": str(user["_id"]), "email": user["email"], "name": user.get("name", "Admin"), "role": "admin"}
 
 @api_router.post("/auth/user/login")
