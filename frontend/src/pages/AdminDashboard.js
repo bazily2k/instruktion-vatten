@@ -411,4 +411,336 @@ export default function AdminDashboard() {
                           <button onClick={() => openEditCodeModal(code)} className="p-2 hover:bg-[#F4F4F5] transition-colors">
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDeleteCode(code.id)} className="p-2 hover:bg-[#FF204E] hover:text-white transiti
+                          <button onClick={() => handleDeleteCode(code.id)} className="p-2 hover:bg-[#FF204E] hover:text-white transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between bg-[#F4F4F5] p-3 mb-3">
+                        <code className="font-mono font-bold text-lg tracking-widest">{code.code}</code>
+                        <button onClick={() => copyCodeToClipboard(code.code)} className="p-1 hover:bg-[#E4E4E7] transition-colors" title="Copy">
+                          {copiedCode === code.code ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <button onClick={() => handleToggleCodeActive(code)} className={`px-3 py-1 font-medium ${code.is_active ? 'bg-green-100 text-green-700' : 'bg-[#FF204E] bg-opacity-10 text-[#FF204E]'}`}>
+                          {code.is_active ? 'ACTIVE' : 'INACTIVE'}
+                        </button>
+                        {code.last_used && (
+                          <span className="text-[#52525B]">Last: {new Date(code.last_used).toLocaleDateString('en-US')}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="mt-0">
+            <div className="bg-white border border-[#E4E4E7] p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>Settings</h2>
+                {!editingSettings ? (
+                  <button onClick={() => setEditingSettings(true)} className="btn-outline flex items-center gap-2 py-3">
+                    <Edit2 className="w-5 h-5" /><span>EDIT</span>
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditingSettings(false); setSettingsForm(settings); }} className="btn-outline flex items-center gap-2 py-3">
+                      <X className="w-5 h-5" /><span>CANCEL</span>
+                    </button>
+                    <button onClick={handleSaveSettings} className="btn-primary flex items-center gap-2 py-3">
+                      <Save className="w-5 h-5" /><span>SAVE</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              {settingsError && (
+                <div className="bg-[#FF204E] text-white p-4 mb-6 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />{settingsError}
+                </div>
+              )}
+              {settingsSuccess && (
+                <div className="bg-green-600 text-white p-4 mb-6 flex items-center gap-2">
+                  <Check className="w-5 h-5" />{settingsSuccess}
+                </div>
+              )}
+              {settingsLoading ? (
+                <p className="text-[#52525B]">Loading settings...</p>
+              ) : (
+                <div className="space-y-8">
+                  <div>
+                    <label className="overline block mb-3">KEY BOX CODE</label>
+                    {editingSettings ? (
+                      <Input value={settingsForm.shared_code} onChange={(e) => setSettingsForm({ ...settingsForm, shared_code: e.target.value })} className="font-mono text-2xl tracking-widest rounded-none border-2" />
+                    ) : (
+                      <div className="font-mono text-4xl font-bold tracking-widest bg-[#F4F4F5] p-4">{settings?.shared_code}</div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="overline block mb-3">CODE DESCRIPTION</label>
+                    {editingSettings ? (
+                      <Input value={settingsForm.shared_code_description} onChange={(e) => setSettingsForm({ ...settingsForm, shared_code_description: e.target.value })} className="rounded-none border-2" />
+                    ) : (
+                      <p className="text-[#52525B]">{settings?.shared_code_description}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="overline block mb-3">INSTRUCTIONS TEXT</label>
+                    {editingSettings ? (
+                      <textarea value={settingsForm.instructions_text} onChange={(e) => setSettingsForm({ ...settingsForm, instructions_text: e.target.value })} className="w-full border-2 border-[#E4E4E7] p-3 rounded-none focus:border-[#0047FF] focus:outline-none min-h-[100px]" />
+                    ) : (
+                      <div className="p-4 bg-[#FFD700] bg-opacity-20 border-l-4 border-[#FFD700]">
+                        <p className="font-medium">{settings?.instructions_text}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="overline">INSTRUCTION STEPS</label>
+                      {editingSettings && (
+                        <button onClick={handleAddStep} className="btn-outline py-2 px-4 flex items-center gap-2 text-sm">
+                          <Plus className="w-4 h-4" />ADD STEP
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-4">
+                      {(editingSettings ? settingsForm.instructions_steps : settings?.instructions_steps)?.map((step, index) => (
+                        <div key={index} className="border border-[#E4E4E7] p-4">
+                          <div className="flex items-start gap-4">
+                            <span className="step-number text-4xl">{String(step.step).padStart(2, '0')}</span>
+                            <div className="flex-1 space-y-3">
+                              {editingSettings ? (
+                                <>
+                                  <Input value={step.title} onChange={(e) => handleUpdateStep(index, 'title', e.target.value)} placeholder="Title" className="rounded-none border-2 font-semibold" />
+                                  <textarea value={step.description} onChange={(e) => handleUpdateStep(index, 'description', e.target.value)} placeholder="Description" className="w-full border-2 border-[#E4E4E7] p-2 rounded-none focus:border-[#0047FF] focus:outline-none" />
+                                  <div className="border-t border-[#E4E4E7] pt-3 mt-3">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <span className="text-sm font-medium text-[#52525B]">IMAGES & DOCUMENTS</span>
+                                      <div className="flex gap-2">
+                                        <button onClick={() => handleFileUploadClick(index)} disabled={uploadingMedia?.loading} className="text-[#0047FF] hover:text-blue-800 flex items-center gap-1 text-sm font-medium bg-blue-50 px-3 py-1.5 border border-[#0047FF]">
+                                          {uploadingMedia?.stepIndex === index && uploadingMedia?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                          Upload File
+                                        </button>
+                                        <button onClick={() => handleAddMedia(index)} className="text-[#52525B] hover:text-[#09090B] flex items-center gap-1 text-sm">
+                                          <Link className="w-4 h-4" />Add URL
+                                        </button>
+                                      </div>
+                                    </div>
+                                    {step.media && step.media.length > 0 ? (
+                                      <div className="space-y-3">
+                                        {step.media.map((media, mediaIndex) => (
+                                          <div key={mediaIndex} className="bg-[#F4F4F5] p-3 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                              <Select value={media.type} onValueChange={(value) => handleUpdateMedia(index, mediaIndex, 'type', value)}>
+                                                <SelectTrigger className="w-32 rounded-none border-2"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="image"><div className="flex items-center gap-2"><Image className="w-4 h-4" />Image</div></SelectItem>
+                                                  <SelectItem value="document"><div className="flex items-center gap-2"><FileText className="w-4 h-4" />Document</div></SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                              <Input value={media.url} onChange={(e) => handleUpdateMedia(index, mediaIndex, 'url', e.target.value)} placeholder="URL" className="flex-1 rounded-none border-2 text-sm" />
+                                              <button onClick={() => handleFileUploadClick(index, mediaIndex)} disabled={uploadingMedia?.loading} className="p-2 hover:bg-blue-100 transition-colors text-[#0047FF]" title="Upload new file">
+                                                <Upload className="w-4 h-4" />
+                                              </button>
+                                              <button onClick={() => handleRemoveMedia(index, mediaIndex)} className="p-2 hover:bg-[#FF204E] hover:text-white transition-colors">
+                                                <Trash2 className="w-4 h-4" />
+                                              </button>
+                                            </div>
+                                            <Input value={media.caption || media.name || ''} onChange={(e) => handleUpdateMedia(index, mediaIndex, media.type === 'image' ? 'caption' : 'name', e.target.value)} placeholder={media.type === 'image' ? 'Caption (optional)' : 'Document name'} className="rounded-none border-2 text-sm" />
+                                            {media.type === 'image' && media.url && (
+                                              <img src={media.url} alt={media.caption || 'Preview'} className="max-w-[200px] max-h-[150px] object-cover border" onError={(e) => { e.target.style.display = 'none'; }} />
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-6 border-2 border-dashed border-[#E4E4E7]">
+                                        <Camera className="w-8 h-8 text-[#E4E4E7] mx-auto mb-2" />
+                                        <p className="text-sm text-[#52525B]">No media added yet</p>
+                                        <p className="text-xs text-[#52525B] mt-1">Click "Upload File" to add from camera or device</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <h3 className="font-semibold text-lg">{step.title}</h3>
+                                  <p className="text-[#52525B]">{step.description}</p>
+                                  {step.media && step.media.length > 0 && (
+                                    <div className="flex flex-wrap gap-3 mt-3">
+                                      {step.media.map((media, mediaIndex) => (
+                                        <div key={mediaIndex}>
+                                          {media.type === 'image' ? (
+                                            <div>
+                                              <img src={media.url} alt={media.caption || step.title} className="max-w-xs border" />
+                                              {media.caption && <p className="text-xs text-[#52525B] mt-1">{media.caption}</p>}
+                                            </div>
+                                          ) : (
+                                            <a href={media.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-[#F4F4F5] p-3 hover:bg-[#E4E4E7] transition-colors">
+                                              <FileText className="w-5 h-5 text-[#0047FF]" />
+                                              <span className="text-sm font-medium">{media.name || 'Document'}</span>
+                                              <Link className="w-4 h-4 text-[#52525B]" />
+                                            </a>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {!step.media && step.image_url && (
+                                    <img src={step.image_url} alt={step.title} className="max-w-xs border" />
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            {editingSettings && (
+                              <button onClick={() => handleRemoveStep(index)} className="p-2 hover:bg-[#FF204E] hover:text-white transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Login Logs Tab */}
+          <TabsContent value="logs" className="mt-0">
+            <div className="bg-white border border-[#E4E4E7] p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>Login History</h2>
+                <div className="flex gap-2">
+                  <button onClick={fetchLoginLogs} className="btn-outline flex items-center gap-2 py-3">
+                    <RefreshCw className={`w-5 h-5 ${logsLoading ? 'animate-spin' : ''}`} />
+                    <span>REFRESH</span>
+                  </button>
+                  <button onClick={() => setShowClearModal(true)} className="btn-outline flex items-center gap-2 py-3 text-[#FF204E] border-[#FF204E] hover:bg-[#FF204E] hover:text-white">
+                    <Trash2 className="w-5 h-5" />
+                    <span>CLEAR</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter */}
+              <div className="mb-4">
+                <Input
+                  value={logsFilter}
+                  onChange={(e) => setLogsFilter(e.target.value)}
+                  placeholder="Filter by user or code..."
+                  className="rounded-none border-2 max-w-sm"
+                />
+              </div>
+
+              {logsLoading ? (
+                <p className="text-[#52525B]">Loading logs...</p>
+              ) : loginLogs.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-[#E4E4E7]">
+                  <ClipboardList className="w-12 h-12 text-[#E4E4E7] mx-auto mb-4" />
+                  <p className="text-[#52525B]">No logins recorded yet</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b-2 border-[#09090B]">
+                        <th className="text-left py-3 px-4 overline">DATE & TIME</th>
+                        <th className="text-left py-3 px-4 overline">USER</th>
+                        <th className="text-left py-3 px-4 overline">CODE</th>
+                        <th className="text-left py-3 px-4 overline">IP ADDRESS</th>
+                        <th className="py-3 px-4"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loginLogs
+                        .filter(log =>
+                          logsFilter === '' ||
+                          log.user_name?.toLowerCase().includes(logsFilter.toLowerCase()) ||
+                          log.user_code?.toLowerCase().includes(logsFilter.toLowerCase())
+                        )
+                        .map((log) => (
+                          <tr key={log.id} className="border-b border-[#E4E4E7] hover:bg-[#F4F4F5] transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="font-medium">{new Date(log.timestamp).toLocaleDateString('en-US')}</div>
+                              <div className="text-sm text-[#52525B]">{new Date(log.timestamp).toLocaleTimeString('en-US')}</div>
+                            </td>
+                            <td className="py-3 px-4 font-medium">{log.user_name}</td>
+                            <td className="py-3 px-4">
+                              <code className="font-mono bg-[#F4F4F5] px-2 py-1 tracking-wider">{log.user_code}</code>
+                            </td>
+                            <td className="py-3 px-4 text-[#52525B] text-sm font-mono">{log.ip_address || '-'}</td>
+                            <td className="py-3 px-4">
+                              <button onClick={() => handleDeleteLog(log.id)} className="p-2 hover:bg-[#FF204E] hover:text-white transition-colors" title="Delete">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      {/* Code Modal */}
+      <Dialog open={showCodeModal} onOpenChange={setShowCodeModal}>
+        <DialogContent className="rounded-none border-2 border-[#09090B]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
+              {editingCode ? 'EDIT CODE' : 'NEW ACCESS CODE'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="overline block mb-2">NAME</label>
+              <Input value={codeForm.name} onChange={(e) => setCodeForm({ ...codeForm, name: e.target.value })} placeholder="e.g. John Smith" className="rounded-none border-2" />
+            </div>
+            <div>
+              <label className="overline block mb-2">CODE</label>
+              <Input value={codeForm.code} onChange={(e) => setCodeForm({ ...codeForm, code: e.target.value.toUpperCase() })} placeholder="e.g. ABC123" className="rounded-none border-2 font-mono tracking-widest" />
+            </div>
+            <div>
+              <label className="overline block mb-2">DESCRIPTION (OPTIONAL)</label>
+              <Input value={codeForm.description} onChange={(e) => setCodeForm({ ...codeForm, description: e.target.value })} placeholder="e.g. Apartment 3B" className="rounded-none border-2" />
+            </div>
+            {codeError && <div className="bg-[#FF204E] text-white p-3 text-sm">{codeError}</div>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCodeModal(false)} className="rounded-none border-2">CANCEL</Button>
+            <Button onClick={handleSaveCode} className="rounded-none bg-[#0047FF] hover:bg-blue-800">{editingCode ? 'SAVE' : 'CREATE'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Logs Modal */}
+      <Dialog open={showClearModal} onOpenChange={setShowClearModal}>
+        <DialogContent className="rounded-none border-2 border-[#09090B]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
+              CLEAR LOGIN HISTORY
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-[#52525B]">Leave empty to clear all history, or enter number of days to only clear older entries.</p>
+            <div>
+              <label className="overline block mb-2">CLEAR OLDER THAN (DAYS)</label>
+              <Input value={clearDays} onChange={(e) => setClearDays(e.target.value)} placeholder="e.g. 30 (leave empty to clear all)" type="number" className="rounded-none border-2" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowClearModal(false)} className="rounded-none border-2">CANCEL</Button>
+            <Button onClick={handleClearLogs} className="rounded-none bg-[#FF204E] hover:bg-red-700">CLEAR</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
