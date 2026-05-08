@@ -365,6 +365,26 @@ async def get_login_logs(request: Request, limit: int = 100):
     await require_admin(request)
     logs = await db.login_logs.find({}, {"_id": 0}).sort("timestamp", -1).limit(limit).to_list(limit)
     return logs
+@api_router.delete("/login-logs/{log_id}")
+async def delete_login_log(log_id: str, request: Request):
+    await require_admin(request)
+    result = await db.login_logs.delete_one({"id": log_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Log not found")
+    return {"message": "Log deleted successfully"}
+
+@api_router.delete("/login-logs")
+async def clear_login_logs(request: Request, days: int = None):
+    await require_admin(request)
+    if days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        result = await db.login_logs.delete_many(
+            {"timestamp": {"$lt": cutoff.isoformat()}}
+        )
+    else:
+        result = await db.login_logs.delete_many({})
+    return {"message": f"Deleted {result.deleted_count} logs"}
+
 
 # ============ SETTINGS ENDPOINTS ============
 
