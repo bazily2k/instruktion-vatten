@@ -204,7 +204,7 @@ async def require_admin(request: Request) -> dict:
 # ============ AUTH ENDPOINTS ============
 
 @api_router.post("/auth/admin/login")
-async def admin_login(response: Response, login_data: AdminLogin):
+async def admin_login(response: Response, request: Request, login_data: AdminLogin):
     email = login_data.email.lower()
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(login_data.password, user["password_hash"]):
